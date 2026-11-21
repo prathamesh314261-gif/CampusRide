@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment — CampusRide</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="container">
+      <a href="index.html" class="navbar-brand">🏍️ CampusRide</a>
+      <ul class="navbar-nav">
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="#" onclick="logout();" class="btn btn-ghost btn-sm">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div style="padding:3rem 0;min-height:80vh;display:flex;align-items:center;">
+    <div class="container">
+      <div style="max-width:500px;margin:0 auto;" id="payment-container">
+
+        <!-- Payment Form -->
+        <div id="payment-form-section">
+          <div style="margin-bottom:2rem;text-align:center;">
+            <h1 style="font-size:2rem;font-weight:800;letter-spacing:-0.5px;">Complete Payment</h1>
+            <p style="color:var(--text-secondary);">Choose your preferred payment method</p>
+          </div>
+
+          <!-- Amount -->
+          <div class="card" style="text-align:center;margin-bottom:1.5rem;background:linear-gradient(135deg,rgba(108,99,255,0.12),rgba(0,212,255,0.08));border-color:rgba(108,99,255,0.25);">
+            <div style="color:var(--text-muted);font-size:0.85rem;margin-bottom:0.25rem;">Amount Due</div>
+            <div id="payment-amount" style="font-size:3rem;font-weight:900;background:var(--grad-primary);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">₹--</div>
+            <div style="color:var(--text-muted);font-size:0.8rem;margin-top:0.25rem;">Rental ID: <span id="rental-id-display">--</span></div>
+          </div>
+
+          <!-- Payment Methods -->
+          <h3 style="font-size:0.9rem;font-weight:700;color:var(--text-secondary);margin-bottom:1rem;letter-spacing:0.5px;text-transform:uppercase;">Select Method</h3>
+          <div class="payment-methods">
+            <div class="payment-method-card selected" id="pm-UPI" onclick="selectMethod('UPI')">
+              <div class="payment-method-icon">📱</div>
+              <div class="payment-method-name">UPI</div>
+            </div>
+            <div class="payment-method-card" id="pm-Card" onclick="selectMethod('Card')">
+              <div class="payment-method-icon">💳</div>
+              <div class="payment-method-name">Card</div>
+            </div>
+            <div class="payment-method-card" id="pm-Cash" onclick="selectMethod('Cash')">
+              <div class="payment-method-icon">💵</div>
+              <div class="payment-method-name">Cash</div>
+            </div>
+          </div>
+
+          <!-- UPI Input -->
+          <div id="upi-section" class="form-group">
+            <label class="form-label">UPI ID</label>
+            <input type="text" id="upi_id" class="form-control" placeholder="yourname@upi" value="demo@upi">
+          </div>
+
+          <!-- Card Input (hidden by default) -->
+          <div id="card-section" style="display:none;">
+            <div class="form-group">
+              <label class="form-label">Card Number</label>
+              <input type="text" class="form-control" placeholder="1234 5678 9012 3456" maxlength="19" value="4111 1111 1111 1111">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+              <div class="form-group">
+                <label class="form-label">Expiry</label>
+                <input type="text" class="form-control" placeholder="MM/YY" value="12/26">
+              </div>
+              <div class="form-group">
+                <label class="form-label">CVV</label>
+                <input type="password" class="form-control" placeholder="•••" maxlength="3" value="123">
+              </div>
+            </div>
+          </div>
+
+          <div id="payment-error" class="alert alert-error" style="display:none;"></div>
+
+          <button id="pay-btn" onclick="processPayment()" class="btn btn-primary w-100 btn-lg" style="margin-top:0.5rem;">
+            🔒 Pay Now
+          </button>
+
+          <p style="text-align:center;color:var(--text-muted);font-size:0.78rem;margin-top:0.75rem;">
+            🔒 Secured & encrypted payment
+          </p>
+        </div>
+
+        <!-- Success State -->
+        <div id="payment-success" style="display:none;text-align:center;padding:2rem 0;">
+          <div class="success-ring">✅</div>
+          <h2 style="font-size:1.8rem;font-weight:800;margin-bottom:0.5rem;">Payment Successful!</h2>
+          <p style="color:var(--text-secondary);margin-bottom:1.5rem;">Your vehicle rental is confirmed.</p>
+
+          <div class="card" style="margin-bottom:1.5rem;text-align:left;">
+            <div class="price-row"><span style="color:var(--text-muted);">Amount Paid</span><span id="success-amount" style="font-weight:700;"></span></div>
+            <div class="price-row"><span style="color:var(--text-muted);">Method</span><span id="success-method"></span></div>
+            <div class="price-row"><span style="color:var(--text-muted);">Transaction ID</span><span id="success-txn" style="font-size:0.8rem;color:var(--accent-cyan);"></span></div>
+          </div>
+
+          <a href="dashboard.html" class="btn btn-primary w-100 btn-lg">Go to Dashboard →</a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2026 <span>CampusRide</span>. All rights reserved.</p>
+  </footer>
+
+  <script>
+    const API_BASE = 'http://localhost:15501';
+    let selectedMethod = 'UPI';
+
+    function selectMethod(method) {
+      selectedMethod = method;
+      document.querySelectorAll('.payment-method-card').forEach(c => c.classList.remove('selected'));
+      document.getElementById(`pm-${method}`).classList.add('selected');
+      document.getElementById('upi-section').style.display = method === 'UPI' ? 'block' : 'none';
+      document.getElementById('card-section').style.display = method === 'Card' ? 'block' : 'none';
+    }
+
+    // Load amount from localStorage
+    window.addEventListener('DOMContentLoaded', () => {
+      const amount = sessionStorage.getItem('last_rental_amount') || '--';
+      const rentalId = sessionStorage.getItem('last_rental_id') || '--';
+      document.getElementById('payment-amount').textContent = amount !== '--' ? `₹${parseFloat(amount).toFixed(2)}` : '₹--';
+      document.getElementById('rental-id-display').textContent = `#${rentalId}`;
+    });
+
+    async function processPayment() {
+      const token = sessionStorage.getItem('token');
+      const rentalId = sessionStorage.getItem('last_rental_id');
+      const amount = sessionStorage.getItem('last_rental_amount') || '0';
+      const btn = document.getElementById('pay-btn');
+
+      if (!rentalId || rentalId === 'null' || rentalId === '--') {
+        document.getElementById('payment-error').textContent = 'No active rental found. Please book a vehicle first.';
+        document.getElementById('payment-error').style.display = 'block';
+        return;
+      }
+
+      btn.textContent = 'Processing…';
+      btn.disabled = true;
+
+      // ✅ Use FormData — backend route expects Form params (not query string)
+      const fd = new FormData();
+      fd.append('rental_id', rentalId);
+      fd.append('payment_method', selectedMethod);
+
+      try {
+        const r = await fetch(`${API_BASE}/api/payments`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd
+        });
+        const data = await r.json();
+
+        if (r.ok) {
+          showSuccess(amount, selectedMethod, data.transaction_id);
+        } else {
+          document.getElementById('payment-error').textContent = data.detail || 'Payment failed. Please try again.';
+          document.getElementById('payment-error').style.display = 'block';
+        }
+      } catch (err) {
+        document.getElementById('payment-error').textContent = 'Cannot connect to server. Please check server is running.';
+        document.getElementById('payment-error').style.display = 'block';
+      }
+
+      btn.textContent = '🔒 Pay Now';
+      btn.disabled = false;
+    }
+
+    function showSuccess(amount, method, txnId) {
+      document.getElementById('payment-form-section').style.display = 'none';
+      document.getElementById('payment-success').style.display = 'block';
+      document.getElementById('success-amount').textContent = `₹${parseFloat(amount).toFixed(2)}`;
+      document.getElementById('success-method').textContent = method;
+      document.getElementById('success-txn').textContent = txnId;
+    }
+
+    function logout() { sessionStorage.clear(); window.location.href = 'index.html'; }
+  </script>
+</body>
+</html>

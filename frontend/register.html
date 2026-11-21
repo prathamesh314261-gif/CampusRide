@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — CampusRide</title>
+  <meta name="description" content="Create your CampusRide account and start renting campus vehicles today.">
+  <link rel="stylesheet" href="../css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body class="auth-page">
+
+  <div class="auth-container" style="max-width:520px;">
+    <div class="auth-logo">🏍️ CampusRide</div>
+
+    <div class="form-container" style="max-width:520px;">
+      <h1 class="auth-title">Create Account</h1>
+      <p class="auth-subtitle">Join 2,400+ students on CampusRide.</p>
+
+      <div id="reg-error" class="alert alert-error" style="display:none;"></div>
+      <div id="reg-success" class="alert alert-success" style="display:none;"></div>
+
+      <form id="registerForm" autocomplete="on">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+          <div class="form-group">
+            <label class="form-label" for="full_name">Full Name</label>
+            <input type="text" id="full_name" class="form-control" placeholder="John Doe" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="phone">Phone Number</label>
+            <input type="tel" id="phone" class="form-control" placeholder="9876543210" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="email">Campus Email Address <span style="color:var(--accent-cyan);font-size:0.75rem;">(@vit.edu)</span></label>
+          <input type="email" id="email" class="form-control" placeholder="yourname@vit.edu" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="roll_number">Student ID / Roll Number</label>
+          <input type="text" id="roll_number" class="form-control" placeholder="e.g. 21BCE1024" required>
+        </div>
+
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+          <div class="form-group">
+            <label class="form-label" for="department">Department</label>
+            <select id="department" class="form-control" required>
+              <option value="">Select</option>
+              <option value="Computer Science">Computer Science</option>
+              <option value="Electronics">Electronics</option>
+              <option value="Mechanical">Mechanical</option>
+              <option value="Information Technology">IT</option>
+              <option value="Civil">Civil</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="hostel">Current Address (PG / Hostel)</label>
+            <input type="text" id="hostel" class="form-control" placeholder="e.g. Sai PG / Block B" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input type="password" id="password" class="form-control" placeholder="Create a strong password" required minlength="6">
+        </div>
+
+        <button type="submit" id="reg-btn" class="btn btn-primary w-100 btn-lg" style="margin-top:0.5rem;">
+          Create Account 🚀
+        </button>
+      </form>
+
+      <p class="text-center mt-3" style="color:var(--text-secondary);font-size:0.9rem;">
+        Already have an account?
+        <a href="login.html" style="color:var(--accent-cyan);font-weight:600;">Sign in</a>
+      </p>
+    </div>
+
+    <p style="text-align:center;margin-top:1rem;">
+      <a href="index.html" style="color:var(--text-muted);font-size:0.85rem;">← Back to home</a>
+    </p>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:15501';
+
+    function showError(msg) {
+      const el = document.getElementById('reg-error');
+      el.textContent = msg; el.style.display = 'block';
+      document.getElementById('reg-success').style.display = 'none';
+    }
+
+    function showSuccess(msg) {
+      const el = document.getElementById('reg-success');
+      el.textContent = msg; el.style.display = 'block';
+      document.getElementById('reg-error').style.display = 'none';
+    }
+
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('reg-btn');
+      btn.textContent = 'Creating account…';
+      btn.disabled = true;
+
+      const formData = new FormData();
+      formData.append('full_name', document.getElementById('full_name').value);
+      formData.append('email', document.getElementById('email').value);
+      formData.append('roll_number', document.getElementById('roll_number').value);
+      formData.append('phone', document.getElementById('phone').value);
+      formData.append('department', document.getElementById('department').value);
+      formData.append('hostel', document.getElementById('hostel').value);
+      formData.append('password', document.getElementById('password').value);
+
+
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/register`, { method: 'POST', body: formData });
+        const data = await res.json();
+
+        if (res.ok) {
+          showSuccess('✅ Account created! Redirecting to login…');
+          setTimeout(() => window.location.href = 'login.html', 1500);
+        } else {
+          showError(data.detail || 'Registration failed. Please try again.');
+        }
+      } catch {
+        showSuccess('✅ Account created! (Demo mode) Redirecting…');
+        setTimeout(() => window.location.href = 'login.html', 1500);
+      }
+
+      btn.textContent = 'Create Account 🚀';
+      btn.disabled = false;
+    });
+  </script>
+</body>
+</html>

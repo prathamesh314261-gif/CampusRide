@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — CampusRide</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    .role-toggle { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .role-btn {
+      flex: 1; min-width: 100px; padding: 0.65rem 0.5rem;
+      border: 1.5px solid var(--glass-border, rgba(255,255,255,0.15));
+      border-radius: 10px; background: rgba(255,255,255,0.05);
+      color: var(--text-secondary, #94a3b8); font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s ease;
+    }
+    .role-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .role-btn.selected {
+      background: linear-gradient(135deg, #3b82f6, #06b6d4);
+      color: #fff; border-color: transparent;
+      box-shadow: 0 0 18px rgba(59,130,246,0.35);
+    }
+    .role-btn.admin-selected {
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      color: #fff; border-color: transparent;
+      box-shadow: 0 0 18px rgba(124,58,237,0.4);
+    }
+    .multi-login-notice {
+      background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3);
+      border-radius: 8px; padding: 0.6rem 0.9rem; margin-bottom: 1rem;
+      font-size: 0.78rem; color: #34d399; text-align: center;
+    }
+  </style>
+</head>
+<body class="auth-page">
+
+  <div class="auth-container">
+    <div class="auth-logo">🏍️ CampusRide</div>
+
+    <div class="form-container">
+      <h1 class="auth-title">Welcome back</h1>
+      <p class="auth-subtitle">Sign in to continue to your dashboard.</p>
+
+      <!-- Multi-login tip -->
+      <div class="multi-login-notice">
+        💡 Open in a <strong>new tab</strong> to login as a different user simultaneously
+      </div>
+
+      <div id="login-error" class="alert alert-error" style="display:none;"></div>
+
+      <form id="loginForm" autocomplete="on">
+        <div class="form-group">
+          <label class="form-label" for="email">Email Address</label>
+          <input type="email" id="email" name="email" class="form-control"
+            placeholder="you@vit.edu" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input type="password" id="password" name="password" class="form-control"
+            placeholder="••••••••" required autocomplete="current-password">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Login as</label>
+          <div class="role-toggle">
+            <button type="button" id="owner-btn" class="role-btn">🚗 Owner</button>
+            <button type="button" id="renter-btn" class="role-btn selected">👤 Renter</button>
+            <button type="button" id="admin-btn" class="role-btn">🛡️ Admin</button>
+          </div>
+        </div>
+
+        <button type="submit" id="login-btn" class="btn btn-primary w-100 btn-lg" style="margin-top:0.5rem;">
+          Sign In →
+        </button>
+      </form>
+
+      <p class="text-center mt-3" style="color:var(--text-secondary);font-size:0.9rem;">
+        No account? <a href="register.html" style="color:var(--accent-cyan);font-weight:600;">Create one free</a>
+      </p>
+
+      <div style="border-top:1px solid var(--glass-border);margin-top:1.5rem;padding-top:1.25rem;">
+        <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.75rem;text-align:center;">Demo credentials (Quick Login)</p>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <button onclick="demoLogin('aisha@vit.edu','secret123','renter')" class="btn btn-ghost btn-sm" style="flex:1;font-size:0.75rem;">👤 Renter (Aisha)</button>
+          <button onclick="demoLogin('neha@vit.edu','secret123','owner')" class="btn btn-ghost btn-sm" style="flex:1;font-size:0.75rem;">🚗 Owner (Neha)</button>
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem;">
+          <button onclick="demoLogin('prathamesh@vit.edu','secret123','renter')" class="btn btn-ghost btn-sm" style="flex:1;font-size:0.75rem;">👤 Renter (Prathamesh)</button>
+          <button onclick="demoLogin('admin@vit.edu','admin123','admin')" class="btn btn-ghost btn-sm" style="flex:1;font-size:0.75rem;border-color:rgba(124,58,237,0.4);color:#a78bfa;">🛡️ Admin</button>
+        </div>
+      </div>
+    </div>
+
+    <p style="text-align:center;margin-top:1rem;">
+      <a href="index.html" style="color:var(--text-muted);font-size:0.85rem;">← Back to home</a>
+    </p>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:15501';
+
+    // ✅ FIX: Do NOT clear sessionStorage here — only clear on explicit logout.
+    // This allows multiple users to stay logged in across different browser tabs.
+
+    // Track selected role (default: renter)
+    let selectedLoginAs = 'renter';
+
+    function showError(msg) {
+      const el = document.getElementById('login-error');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function clearRoleButtons() {
+      document.getElementById('owner-btn').classList.remove('selected', 'admin-selected');
+      document.getElementById('renter-btn').classList.remove('selected', 'admin-selected');
+      document.getElementById('admin-btn').classList.remove('selected', 'admin-selected');
+    }
+
+    function demoLogin(email, password, role) {
+      document.getElementById('email').value = email;
+      document.getElementById('password').value = password;
+      clearRoleButtons();
+      selectedLoginAs = role;
+      if (role === 'owner') {
+        document.getElementById('owner-btn').classList.add('selected');
+      } else if (role === 'admin') {
+        document.getElementById('admin-btn').classList.add('admin-selected');
+      } else {
+        document.getElementById('renter-btn').classList.add('selected');
+      }
+    }
+
+    // Role toggle buttons
+    document.getElementById('owner-btn').addEventListener('click', () => {
+      selectedLoginAs = 'owner';
+      clearRoleButtons();
+      document.getElementById('owner-btn').classList.add('selected');
+    });
+
+    document.getElementById('renter-btn').addEventListener('click', () => {
+      selectedLoginAs = 'renter';
+      clearRoleButtons();
+      document.getElementById('renter-btn').classList.add('selected');
+    });
+
+    document.getElementById('admin-btn').addEventListener('click', () => {
+      selectedLoginAs = 'admin';
+      clearRoleButtons();
+      document.getElementById('admin-btn').classList.add('admin-selected');
+    });
+
+    // Login form submit
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('login-btn');
+      btn.textContent = 'Signing in…';
+      btn.disabled = true;
+      document.getElementById('login-error').style.display = 'none';
+
+      const formData = new FormData();
+      formData.append('email', document.getElementById('email').value.trim());
+      formData.append('password', document.getElementById('password').value);
+      formData.append('login_as', selectedLoginAs);
+
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+          method: 'POST',
+          body: formData,
+          signal: AbortSignal.timeout(6000)
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          // ✅ FIX: Use sessionStorage (per-tab) instead of localStorage (shared across all tabs)
+          // This allows Tab 1 (Admin), Tab 2 (Student), Tab 3 (Owner) to work independently!
+          sessionStorage.setItem('token', data.access_token);
+          sessionStorage.setItem('student_id', data.student_id);
+          sessionStorage.setItem('login_as', data.login_as);
+          sessionStorage.setItem('role', data.role);
+          sessionStorage.setItem('user_name', data.full_name);
+
+          // Redirect based on actual DB role
+          const dbRole = data.role || '';
+          const loginAs = data.login_as || selectedLoginAs;
+
+          if (dbRole === 'admin' || loginAs === 'admin') {
+            window.location.href = 'admin-dashboard.html';
+          } else if (loginAs === 'owner') {
+            window.location.href = 'owner-dashboard.html';
+          } else {
+            window.location.href = 'dashboard.html';
+          }
+        } else {
+          showError(data.detail || 'Invalid email or password.');
+        }
+      } catch {
+        // Server not running — demo mode (offline)
+        const email = document.getElementById('email').value.trim();
+        const nameMap = {
+          'neha@vit.edu': 'Neha Joshi',
+          'aisha@vit.edu': 'Aisha Khan',
+          'prathamesh@vit.edu': 'Prathamesh Desai',
+          'admin@vit.edu': 'Campus Admin',
+          'neha@campus.edu': 'Neha Joshi',
+          'aisha@campus.edu': 'Aisha Khan',
+          'prathamesh@campus.edu': 'Prathamesh Desai'
+        };
+        const roleMap = {
+          'admin@vit.edu': 'admin',
+          'neha@vit.edu': 'owner'
+        };
+        // ✅ FIX: sessionStorage for offline demo mode too
+        sessionStorage.setItem('token', 'offline_demo_token');
+        sessionStorage.setItem('student_id', '1');
+        sessionStorage.setItem('role', roleMap[email] || selectedLoginAs);
+        sessionStorage.setItem('login_as', selectedLoginAs);
+        sessionStorage.setItem('user_name', nameMap[email] || 'Demo User');
+
+        if (selectedLoginAs === 'admin' || roleMap[email] === 'admin') {
+          window.location.href = 'admin-dashboard.html';
+        } else if (selectedLoginAs === 'owner') {
+          window.location.href = 'owner-dashboard.html';
+        } else {
+          window.location.href = 'dashboard.html';
+        }
+      }
+
+      btn.textContent = 'Sign In →';
+      btn.disabled = false;
+    });
+  </script>
+</body>
+</html>

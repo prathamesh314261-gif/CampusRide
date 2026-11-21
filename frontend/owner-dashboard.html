@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Owner Dashboard — CampusRide</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    .vehicle-card{background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:14px;padding:1.25rem;margin-bottom:.75rem;display:flex;align-items:center;gap:1rem;transition:var(--transition);}
+    .vehicle-card:hover{border-color:var(--accent-blue);}
+    .vehicle-emoji{font-size:2rem;min-width:48px;text-align:center;}
+    .vehicle-info{flex:1;}
+    .vehicle-name{font-weight:700;font-size:1rem;margin-bottom:.2rem;}
+    .vehicle-meta{color:var(--text-secondary);font-size:.8rem;}
+    .vehicle-rate{font-weight:700;color:var(--accent-green);font-size:1rem;}
+    .tbl{width:100%;border-collapse:collapse;}
+    .tbl th{text-align:left;padding:.7rem 1rem;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--glass-border);}
+    .tbl td{padding:.85rem 1rem;border-bottom:1px solid var(--border-subtle);font-size:.875rem;}
+    .tbl tr:last-child td{border-bottom:none;}
+    .empty-state{text-align:center;padding:3rem 2rem;color:var(--text-muted);}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;}
+    .modal-overlay.open{display:flex;}
+    .modal-box{background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:20px;padding:2rem;width:90%;max-width:540px;max-height:90vh;overflow-y:auto;}
+    .modal-title{font-size:1.2rem;font-weight:700;margin-bottom:1.5rem;}
+    .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:600;}
+    .badge-green{background:rgba(0,229,160,.15);color:#00e5a0;}
+    .badge-blue{background:rgba(108,99,255,.2);color:#a89cff;}
+    .badge-red{background:rgba(255,79,94,.15);color:#ff6b77;}
+    .badge-gold{background:rgba(255,209,102,.15);color:#ffd166;}
+    .badge-cyan{background:rgba(0,212,255,.15);color:#00d4ff;}
+    .star{color:#ffd166;}
+    .tab-bar{display:flex;gap:.5rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+    .tab-btn{padding:.5rem 1.1rem;border-radius:8px;border:1px solid var(--glass-border);background:transparent;color:var(--text-secondary);cursor:pointer;font-size:.85rem;transition:var(--transition);}
+    .tab-btn.active{background:var(--accent-blue);color:#fff;border-color:transparent;}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;}
+    .msg-box{display:none;padding:.75rem 1rem;border-radius:10px;margin-bottom:1rem;font-size:.85rem;}
+    .msg-error{background:rgba(255,79,94,.15);color:#ff6b77;border:1px solid rgba(255,79,94,.3);}
+    .msg-success{background:rgba(0,229,160,.15);color:#00e5a0;border:1px solid rgba(0,229,160,.3);}
+  </style>
+</head>
+<body>
+<div class="dashboard-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">🏍️ CampusRide</div>
+    <span class="sidebar-section-label">OWNER</span>
+    <a href="#" class="sidebar-item active" id="sb-overview" onclick="show('overview',this)"><span class="icon">📊</span> Overview</a>
+    <a href="#" class="sidebar-item" id="sb-vehicles" onclick="show('vehicles',this)"><span class="icon">🚗</span> My Vehicles</a>
+    <a href="#" class="sidebar-item" id="sb-bookings" onclick="show('bookings',this)"><span class="icon">📋</span> Bookings</a>
+    <a href="#" class="sidebar-item" id="sb-earnings" onclick="show('earnings',this)"><span class="icon">💰</span> Earnings</a>
+    <a href="#" class="sidebar-item" id="sb-maintenance" onclick="show('maintenance',this)"><span class="icon">🔧</span> Maintenance</a>
+    <a href="#" class="sidebar-item" id="sb-reviews" onclick="show('reviews',this)"><span class="icon">⭐</span> Reviews</a>
+    <span class="sidebar-section-label">AI INTELLIGENCE</span>
+    <a href="#" class="sidebar-item" id="sb-ai" onclick="show('ai-insights',this)"><span class="icon">🤖</span> AI Smart Pricing & Fleet</a>
+    <span class="sidebar-section-label">ACCOUNT</span>
+
+    <a href="profile.html" class="sidebar-item"><span class="icon">👤</span> Profile</a>
+    <a href="login.html" class="sidebar-item" onclick="sessionStorage.clear()"><span class="icon">🚪</span> Logout</a>
+  </aside>
+
+  <!-- Main -->
+  <main class="dashboard-main">
+    <div class="dashboard-header">
+      <div>
+        <div class="dashboard-greeting" id="greeting">Good morning 👋</div>
+        <div class="dashboard-username">Owner Dashboard · <span id="user-name">Owner</span></div>
+      </div>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn btn-ghost btn-sm" onclick="refreshOwnerDashboard()" title="Refresh All Data">🔄 Refresh</button>
+        <button class="btn btn-primary" onclick="openVehicleModal()">+ List Vehicle</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon">🚗</div><div class="stat-value" id="stat-listed">—</div><div class="stat-label">Vehicles Listed</div></div>
+      <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value" id="stat-earnings">—</div><div class="stat-label">Total Earnings</div></div>
+      <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-value" id="stat-active">—</div><div class="stat-label">Active Rentals</div></div>
+      <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value" id="stat-completed">—</div><div class="stat-label">Completed</div></div>
+    </div>
+
+    <!-- Overview -->
+    <div id="section-overview">
+      <div class="card" style="margin-bottom:1.5rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
+          <h3 style="font-size:1rem;font-weight:700;margin:0">🚗 My Vehicles</h3>
+          <div style="display:flex;gap:0.5rem">
+            <button class="btn btn-ghost btn-sm" onclick="refreshOwnerVehicles()">🔄 Refresh</button>
+            <button class="btn btn-primary btn-sm" onclick="openVehicleModal()">+ Add</button>
+          </div>
+        </div>
+        <div id="ov-vehicles">Loading...</div>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
+          <h3 style="font-size:1rem;font-weight:700;margin:0">📋 Recent Bookings</h3>
+          <button class="btn btn-ghost btn-sm" onclick="refreshOwnerBookings()">🔄 Refresh</button>
+        </div>
+        <div id="ov-bookings">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Vehicles -->
+    <div id="section-vehicles" style="display:none">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+          <h2 style="font-size:1.2rem;font-weight:700;margin:0">🚗 My Vehicles</h2>
+          <div style="display:flex;gap:0.5rem">
+            <button class="btn btn-ghost btn-sm" onclick="refreshOwnerVehicles()">🔄 Refresh</button>
+            <button class="btn btn-primary" onclick="openVehicleModal()">+ Add Vehicle</button>
+          </div>
+        </div>
+        <div id="veh-full">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Bookings -->
+    <div id="section-bookings" style="display:none">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+          <h2 style="font-size:1.2rem;font-weight:700;margin:0">📋 All Bookings on My Vehicles</h2>
+          <button class="btn btn-ghost btn-sm" onclick="refreshOwnerBookings()">🔄 Refresh</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr><th>Vehicle</th><th>Renter</th><th>Dates / Hours</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody id="bk-table"><tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Earnings -->
+    <div id="section-earnings" style="display:none">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+          <h2 style="font-size:1.2rem;font-weight:700;margin:0">💰 Earnings Breakdown</h2>
+          <button class="btn btn-ghost btn-sm" onclick="refreshOwnerEarnings()">🔄 Refresh</button>
+        </div>
+        <div id="earn-detail">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Maintenance -->
+    <div id="section-maintenance" style="display:none">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+          <h2 style="font-size:1.2rem;font-weight:700;margin:0">🔧 Vehicle Maintenance</h2>
+          <div style="display:flex;gap:0.5rem">
+            <button class="btn btn-ghost btn-sm" onclick="refreshOwnerMaintenance()">🔄 Refresh</button>
+            <button class="btn btn-primary" onclick="openMaintModal()">+ Report Issue</button>
+          </div>
+        </div>
+        <div id="maint-list">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Reviews -->
+    <div id="section-reviews" style="display:none">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+          <h2 style="font-size:1.2rem;font-weight:700;margin:0">⭐ Customer Reviews</h2>
+          <button class="btn btn-ghost btn-sm" onclick="refreshOwnerReviews()">🔄 Refresh</button>
+        </div>
+        <div id="review-list">Loading...</div>
+      </div>
+    </div>
+
+    <!-- AI Smart Fleet & Dynamic Pricing -->
+    <div id="section-ai-insights" style="display:none">
+      <!-- Dynamic Pricing Tool -->
+      <div class="card" style="margin-bottom:1.5rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem">
+          <div>
+            <h2 style="font-size:1.2rem;font-weight:700">💰 AI Dynamic Pricing Suggester</h2>
+            <p style="color:var(--text-muted);font-size:0.85rem">Calculates optimal hourly rental rates based on live vehicle supply, campus peak hours, and demand elasticity.</p>
+          </div>
+          <span class="badge badge-green">Live ML Optimization</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:1rem;align-items:end;margin-bottom:1.25rem">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Vehicle Type</label>
+            <select id="pricing-type" class="form-control" onchange="calcDynamicPrice()">
+              <option value="Scooter">🛵 Scooter</option>
+              <option value="Bike">🏍️ Bike</option>
+              <option value="Car">🚗 Car</option>
+              <option value="Bicycle">🚲 Bicycle</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Base Rate (₹/hr)</label>
+            <input type="number" id="pricing-base" class="form-control" value="50" oninput="calcDynamicPrice()">
+          </div>
+          <button class="btn btn-primary" onclick="calcDynamicPrice()">✨ Calculate AI Price</button>
+        </div>
+        <div id="pricing-result" style="background:var(--bg-surface);padding:1rem;border-radius:10px;border:1px solid var(--glass-border)">
+          Loading dynamic pricing recommendation...
+        </div>
+      </div>
+
+      <!-- Predictive Fleet Maintenance -->
+      <div class="card" style="margin-bottom:1.5rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <div>
+            <h2 style="font-size:1.2rem;font-weight:700">🔧 Predictive Fleet Maintenance Health</h2>
+            <p style="color:var(--text-muted);font-size:0.85rem">ML degradation models analyze hours, trips, and service intervals to predict maintenance risks.</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadPredictiveMaintenance(true)">🔄 Refresh Analysis</button>
+        </div>
+        <div id="ai-maint-container">Loading predictive maintenance...</div>
+      </div>
+
+      <!-- Tomorrow's Demand Forecast -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <h2 style="font-size:1.2rem;font-weight:700;margin:0">📈 Campus Fleet Demand Forecast</h2>
+          <button class="btn btn-ghost btn-sm" onclick="loadDemandForecast(true)">🔄 Refresh Forecast</button>
+        </div>
+        <div id="ai-demand-container">Loading demand forecast...</div>
+      </div>
+    </div>
+
+
+  </main>
+</div>
+
+<!-- Add Vehicle Modal -->
+<div class="modal-overlay" id="vehicle-modal" onclick="if(event.target===this)closeVM()">
+  <div class="modal-box">
+    <div class="modal-title">🚗 List Your Vehicle</div>
+    <div id="vm-msg" class="msg-box"></div>
+    <form id="vehicleForm">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Vehicle Type *</label>
+          <select id="v-type" class="form-control" required>
+            <option value="">Select</option>
+            <option value="Scooter">🛵 Scooter</option>
+            <option value="Bike">🏍️ Bike</option>
+            <option value="Car">🚗 Car</option>
+            <option value="Bicycle">🚲 Bicycle</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fuel Type *</label>
+          <select id="v-fuel" class="form-control" required>
+            <option value="">Select</option>
+            <option value="Petrol">Petrol</option>
+            <option value="Diesel">Diesel</option>
+            <option value="Electric">Electric ⚡</option>
+            <option value="None">None (Bicycle)</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Brand *</label>
+          <input type="text" id="v-brand" class="form-control" placeholder="e.g. Honda" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Model *</label>
+          <input type="text" id="v-model" class="form-control" placeholder="e.g. Activa" required>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Hourly Rate (₹) *</label>
+          <input type="number" id="v-rate" class="form-control" placeholder="50" min="10" max="2000" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Seats</label>
+          <input type="number" id="v-seats" class="form-control" value="2" min="1" max="8">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">License Plate *</label>
+          <input type="text" id="v-plate" class="form-control" placeholder="MH02AB1234" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <input type="text" id="v-loc" class="form-control" placeholder="e.g. Hostel A Gate">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea id="v-desc" class="form-control" rows="2" placeholder="Tell renters about your vehicle..."></textarea>
+      </div>
+      <div style="display:flex;gap:.75rem;margin-top:.5rem">
+        <button type="submit" id="vm-btn" class="btn btn-primary" style="flex:1">🚀 List Vehicle</button>
+        <button type="button" class="btn btn-ghost" onclick="closeVM()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Vehicle Modal -->
+<div class="modal-overlay" id="edit-modal" onclick="if(event.target===this)closeEM()">
+  <div class="modal-box">
+    <div class="modal-title">✏️ Edit Vehicle</div>
+    <div id="em-msg" class="msg-box"></div>
+    <input type="hidden" id="em-vid">
+    <div class="form-group">
+      <label class="form-label">New Hourly Rate (₹)</label>
+      <input type="number" id="em-rate" class="form-control" placeholder="Leave blank to keep current">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Location</label>
+      <input type="text" id="em-loc" class="form-control">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea id="em-desc" class="form-control" rows="2"></textarea>
+    </div>
+    <div style="display:flex;gap:.75rem">
+      <button onclick="submitEdit()" class="btn btn-primary" style="flex:1">Save Changes</button>
+      <button onclick="closeEM()" class="btn btn-ghost">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Maintenance Modal -->
+<div class="modal-overlay" id="maint-modal" onclick="if(event.target===this)closeMM()">
+  <div class="modal-box">
+    <div class="modal-title">🔧 Report Maintenance Issue</div>
+    <div id="mm-msg" class="msg-box"></div>
+    <div class="form-group">
+      <label class="form-label">Vehicle *</label>
+      <select id="mm-vid" class="form-control"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Issue Type *</label>
+      <select id="mm-type" class="form-control">
+        <option value="Engine">Engine</option>
+        <option value="Tyre">Tyre</option>
+        <option value="Brake">Brake</option>
+        <option value="Battery">Battery</option>
+        <option value="Accident Damage">Accident Damage</option>
+        <option value="Routine Service">Routine Service</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea id="mm-desc" class="form-control" rows="3"></textarea>
+    </div>
+    <div style="display:flex;gap:.75rem">
+      <button onclick="submitMaint()" class="btn btn-primary" style="flex:1">Report</button>
+      <button onclick="closeMM()" class="btn btn-ghost">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:15501';
+const token = sessionStorage.getItem('token');
+const loginAs = sessionStorage.getItem('login_as');
+if (!token || loginAs === 'renter') { window.location.href = 'login.html'; }
+
+const hr = new Date().getHours();
+document.getElementById('greeting').textContent = hr<12?'Good morning 👋':hr<17?'Good afternoon 👋':'Good evening 👋';
+document.getElementById('user-name').textContent = sessionStorage.getItem('user_name') || 'Owner';
+
+const EMOJIS = {Scooter:'🛵',Bike:'🏍️',Car:'🚗',Bicycle:'🚲'};
+const SC = {Available:'badge-green',Rented:'badge-blue',Maintenance:'badge-gold'};
+const BC = {Confirmed:'badge-blue',Active:'badge-green',Completed:'badge-cyan',Cancelled:'badge-red'};
+
+let vehicles=[], bookings=[], maintenances=[], reviewsData=[], disputesData=[];
+let currentSection = 'overview';
+
+function show(name, el){
+  currentSection = name;
+  document.querySelectorAll('[id^="section-"]').forEach(s=>s.style.display='none');
+  document.getElementById('section-'+name).style.display='block';
+  document.querySelectorAll('.sidebar-item').forEach(i=>i.classList.remove('active'));
+  if(el) el.classList.add('active');
+  if(name==='vehicles') renderVehicles();
+  if(name==='bookings') renderBkTable();
+  if(name==='earnings') renderEarnings();
+  if(name==='maintenance') renderMaint();
+  if(name==='reviews') renderReviews();
+  if(name==='ai-insights') {
+    calcDynamicPrice();
+    loadPredictiveMaintenance();
+    loadDemandForecast();
+  }
+}
+
+async function refreshOwnerDashboard(){
+  toast('🔄 Refreshing fleet dashboard...');
+  await loadAll();
+  if(currentSection==='vehicles') renderVehicles();
+  else if(currentSection==='bookings') renderBkTable();
+  else if(currentSection==='earnings') renderEarnings();
+  else if(currentSection==='maintenance') renderMaint();
+  else if(currentSection==='reviews') renderReviews();
+  else if(currentSection==='ai-insights') {
+    calcDynamicPrice();
+    await loadPredictiveMaintenance(true);
+    await loadDemandForecast(true);
+  }
+  toast('✅ Dashboard updated!');
+}
+
+async function refreshOwnerVehicles(){
+  toast('🔄 Refreshing fleet vehicles...');
+  try{const r=await api('/api/vehicles/my');vehicles=await r.json();if(!Array.isArray(vehicles))vehicles=[];}catch{vehicles=[];}
+  renderVehicles();
+  renderOverview();
+  toast('✅ Vehicles updated!');
+}
+
+async function refreshOwnerBookings(){
+  toast('🔄 Refreshing bookings...');
+  try{const r=await api('/api/rentals/owner');bookings=await r.json();if(!Array.isArray(bookings))bookings=[];}catch{bookings=[];}
+  renderBkTable();
+  renderOverview();
+  toast('✅ Bookings updated!');
+}
+
+async function refreshOwnerEarnings(){
+  toast('🔄 Refreshing earnings...');
+  try{
+    const r=await api('/api/vehicles/my/earnings');const d=await r.json();
+    document.getElementById('stat-listed').textContent=d.vehicles_listed??0;
+    document.getElementById('stat-earnings').textContent='₹'+(d.total_earnings??0).toFixed(0);
+    document.getElementById('stat-active').textContent=d.active_rentals??0;
+    document.getElementById('stat-completed').textContent=d.completed_rentals??0;
+  }catch{}
+  renderEarnings();
+  toast('✅ Earnings updated!');
+}
+
+async function refreshOwnerMaintenance(){
+  toast('🔄 Refreshing maintenance schedule...');
+  try{const r=await api('/api/maintenance/my');maintenances=await r.json();if(!Array.isArray(maintenances))maintenances=[];}catch{maintenances=[];}
+  renderMaint();
+  toast('✅ Maintenance schedule updated!');
+}
+
+async function refreshOwnerReviews(){
+  toast('🔄 Refreshing customer reviews...');
+  await renderReviews();
+  toast('✅ Reviews updated!');
+}
+
+const h = (s,c='',t=token)=>({Authorization:`Bearer ${t}`});
+const api = async (url,opts={})=>{
+  const r=await fetch(API+url,{headers:{Authorization:`Bearer ${token}`,...(opts.headers||{})},signal:AbortSignal.timeout(8000),...opts});
+  return r;
+};
+
+async function loadAll(){
+  // Vehicles
+  try{const r=await api('/api/vehicles/my');vehicles=await r.json();if(!Array.isArray(vehicles))vehicles=[];}catch{vehicles=[];}
+  // Bookings
+  try{const r=await api('/api/rentals/owner');bookings=await r.json();if(!Array.isArray(bookings))bookings=[];}catch{bookings=[];}
+  // Maintenance
+  try{const r=await api('/api/maintenance/my');maintenances=await r.json();if(!Array.isArray(maintenances))maintenances=[];}catch{maintenances=[];}
+  // Earnings stats
+  try{
+    const r=await api('/api/vehicles/my/earnings');const d=await r.json();
+    document.getElementById('stat-listed').textContent=d.vehicles_listed??0;
+    document.getElementById('stat-earnings').textContent='₹'+(d.total_earnings??0).toFixed(0);
+    document.getElementById('stat-active').textContent=d.active_rentals??0;
+    document.getElementById('stat-completed').textContent=d.completed_rentals??0;
+  }catch{
+    document.getElementById('stat-listed').textContent=vehicles.length;
+    document.getElementById('stat-earnings').textContent='₹0';
+    document.getElementById('stat-active').textContent='0';
+    document.getElementById('stat-completed').textContent='0';
+  }
+  renderOverview();
+}
+
+function vCard(v,full=true){
+  const em=EMOJIS[v.vehicle_type]||'🚗';
+  const sc=SC[v.availability_status]||'badge-cyan';
+  const stars='⭐'.repeat(Math.round(v.avg_rating||0));
+  return `<div class="vehicle-card">
+    <div class="vehicle-emoji">${em}</div>
+    <div class="vehicle-info">
+      <div class="vehicle-name">${v.brand} ${v.model}</div>
+      <div class="vehicle-meta">${v.vehicle_type} · ${v.fuel_type} · 💺${v.seating_capacity} · 📍${v.location||'Campus'}</div>
+      ${v.avg_rating>0?`<div style="font-size:.8rem;margin-top:.2rem">${stars} <span style="color:var(--text-muted)">(${v.total_reviews} reviews)</span></div>`:''}
+    </div>
+    <div style="text-align:right;min-width:90px">
+      <div class="vehicle-rate">₹${v.hourly_rate}/hr</div>
+      <span class="badge ${sc}">${v.availability_status}</span>
+    </div>
+    <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
+      <button onclick="openEM(${v.vehicle_id},'${v.location||''}','${(v.description||'').replace(/'/g,'`')}')" class="btn btn-ghost btn-sm" title="Edit Vehicle">✏️ Edit</button>
+      <button onclick="toggleAvail(${v.vehicle_id},'${v.availability_status}')" class="btn btn-ghost btn-sm" ${v.availability_status==='Rented'?'disabled':''} title="Toggle Status">${v.availability_status==='Maintenance'?'✅ Available':'🔧 Maintenance'}</button>
+      <button onclick="delVehicle(${v.vehicle_id},'${v.brand} ${v.model}')" class="btn btn-ghost btn-sm" style="color:var(--accent-red);border:1px solid rgba(255,79,94,0.3)" title="Delete Listed Vehicle">🗑️ Delete</button>
+    </div>
+  </div>`;
+}
+
+function renderOverview(){
+  const ov=document.getElementById('ov-vehicles');
+  const full=document.getElementById('veh-full');
+  if(vehicles.length===0){
+    const msg=`<div class="empty-state">🚗<br><strong>No vehicles yet</strong><br>Click "+ Add Vehicle" to get started</div>`;
+    if(ov)ov.innerHTML=msg; if(full)full.innerHTML=msg; return;
+  }
+  if(ov)ov.innerHTML=vehicles.slice(0,3).map(v=>vCard(v,false)).join('');
+  if(full)full.innerHTML=vehicles.map(v=>vCard(v,true)).join('');
+
+  // Overview bookings
+  const ob=document.getElementById('ov-bookings');
+  if(ob){
+    if(bookings.length===0){ob.innerHTML='<p class="text-muted">No bookings yet</p>';return;}
+    ob.innerHTML=`<table class="tbl"><thead><tr><th>Vehicle</th><th>Renter</th><th>Amount</th><th>Status</th></tr></thead><tbody>
+      ${bookings.slice(0,5).map(b=>`<tr>
+        <td><strong>${b.vehicle_name}</strong></td>
+        <td>${b.renter_name}</td>
+        <td><strong>₹${(b.final_amount||0).toFixed(0)}</strong></td>
+        <td><span class="badge ${BC[b.status]||'badge-cyan'}">${b.status}</span></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+  }
+}
+
+function renderBkTable(){
+  const el=document.getElementById('bk-table');
+  if(!el)return;
+  if(bookings.length===0){el.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:2rem">No bookings found</td></tr>';return;}
+  el.innerHTML=bookings.map(b=>{
+    const canStart = b.status === 'Confirmed';
+    return `<tr>
+      <td><strong>${b.vehicle_name}</strong></td>
+      <td>${b.renter_name}<br><small style="color:var(--text-muted)">${b.renter_phone||''}</small></td>
+      <td>${new Date(b.start_time).toLocaleDateString()}<br><small style="color:var(--text-muted)">${(b.total_hours||0).toFixed(1)}h</small></td>
+      <td><strong>₹${(b.final_amount||0).toFixed(0)}</strong></td>
+      <td>
+        <span class="badge ${BC[b.status]||'badge-cyan'}">${b.status}</span>
+        ${canStart?`<div style="margin-top:6px"><button onclick="ownerVerifyHandover(${b.rental_id}, '${b.pickup_code || '123456'}')" class="btn btn-primary btn-sm" style="font-size:0.75rem;padding:2px 8px">🔑 Verify Handover</button></div>`:''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function ownerVerifyHandover(rentalId, expectedCode){
+  const defaultCode = (expectedCode && expectedCode !== 'N/A' && expectedCode !== 'None') ? expectedCode : '123456';
+  const otp = prompt(`Enter the 6-digit Handover OTP provided by the renter:\n(Demo code: ${defaultCode})`, defaultCode);
+  if(!otp) return;
+  const fd = new FormData();
+  fd.append('otp', otp.trim());
+  const r = await fetch(`${API}/api/rentals/${rentalId}/start`, {
+    method: 'PUT',
+    headers: {Authorization: `Bearer ${token}`},
+    body: fd
+  });
+  const d = await r.json();
+  if(r.ok){
+    toast('✅ Handover verified! Rental is now ACTIVE.');
+    await loadAll();
+    renderBkTable();
+  } else {
+    toast(d.detail || 'Handover verification failed');
+  }
+}
+
+
+
+function renderEarnings(){
+  const el=document.getElementById('earn-detail');
+  if(!el)return;
+  if(vehicles.length===0){el.innerHTML='<p class="text-muted">No vehicles to show.</p>';return;}
+  const earnMap={};
+  vehicles.forEach(v=>earnMap[v.vehicle_id]=0);
+  bookings.filter(b=>b.status==='Completed').forEach(b=>{if(earnMap[b.vehicle_id]!==undefined)earnMap[b.vehicle_id]+=(b.final_amount||0);});
+  const maxE=Math.max(1,...Object.values(earnMap));
+  el.innerHTML=vehicles.map(v=>{
+    const e=earnMap[v.vehicle_id]||0;
+    const pct=Math.round((e/maxE)*100);
+    return `<div style="margin-bottom:1.25rem">
+      <div style="display:flex;justify-content:space-between;margin-bottom:.4rem">
+        <span>${EMOJIS[v.vehicle_type]||'🚗'} ${v.brand} ${v.model}</span><strong>₹${e.toFixed(0)}</strong>
+      </div>
+      <div style="background:var(--bg-surface);border-radius:8px;height:8px;overflow:hidden">
+        <div style="background:var(--grad-primary);height:100%;width:${pct}%;border-radius:8px;transition:width .6s ease"></div>
+      </div>
+      <div style="margin-top:.4rem;font-size:.78rem;color:var(--text-muted)">
+        ⭐${(v.avg_rating||0).toFixed(1)} · ${v.total_reviews||0} reviews · ${bookings.filter(b=>b.vehicle_id===v.vehicle_id).length} total bookings
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderMaint(){
+  const el=document.getElementById('maint-list');
+  if(!el)return;
+  // Populate vehicle select in modal
+  const sel=document.getElementById('mm-vid');
+  if(sel){sel.innerHTML=vehicles.map(v=>`<option value="${v.vehicle_id}">${v.brand} ${v.model}</option>`).join('');}
+  if(maintenances.length===0){el.innerHTML='<div class="empty-state">🔧<br>No maintenance records</div>';return;}
+  el.innerHTML=`<table class="tbl"><thead><tr><th>Vehicle</th><th>Type</th><th>Date</th><th>Cost</th><th>Status</th><th></th></tr></thead><tbody>
+    ${maintenances.map(m=>`<tr>
+      <td><strong>${m.vehicle_name}</strong></td>
+      <td>${m.maintenance_type}</td>
+      <td>${m.maintenance_date}</td>
+      <td>₹${(m.cost||0).toFixed(0)}</td>
+      <td><span class="badge ${m.status==='Done'?'badge-green':'badge-gold'}">${m.status}</span></td>
+      <td>${m.status!=='Done'?`<button onclick="completeMaint(${m.maintenance_id})" class="btn btn-primary btn-sm">✅ Done</button>`:''}</td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+function renderReviews(){
+  const el=document.getElementById('review-list');
+  if(!el)return;
+  // Collect reviews from all owned vehicles
+  Promise.all(vehicles.map(v=>fetch(`${API}/api/reviews/vehicle/${v.vehicle_id}`,{headers:{Authorization:`Bearer ${token}`}}).then(r=>r.json()).catch(()=>[])))
+    .then(arrays=>{
+      const all=arrays.flat();
+      if(all.length===0){el.innerHTML='<div class="empty-state">⭐<br>No reviews yet</div>';return;}
+      el.innerHTML=`<table class="tbl"><thead><tr><th>Reviewer</th><th>Rating</th><th>Comment</th><th>Date</th></tr></thead><tbody>
+        ${all.map(r=>`<tr>
+          <td><strong>${r.reviewer_name}</strong></td>
+          <td>${'⭐'.repeat(r.rating)}</td>
+          <td style="max-width:250px;white-space:normal">${r.comment||'<i style="color:var(--text-muted)">No comment</i>'}</td>
+          <td style="color:var(--text-muted);font-size:.8rem">${r.created_at?new Date(r.created_at).toLocaleDateString():''}</td>
+        </tr>`).join('')}
+      </tbody></table>`;
+    });
+}
+
+// ── Add Vehicle ──
+function openVehicleModal(){
+  document.getElementById('vehicleForm').reset();
+  showMsg('vm-msg','','');
+  document.getElementById('vm-btn').textContent='🚀 List Vehicle';
+  document.getElementById('vm-btn').disabled=false;
+  document.getElementById('vehicle-modal').classList.add('open');
+}
+function closeVM(){document.getElementById('vehicle-modal').classList.remove('open');}
+
+document.getElementById('vehicleForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const btn=document.getElementById('vm-btn');
+  btn.textContent='Saving…';btn.disabled=true;
+  const fd=new FormData();
+  fd.append('vehicle_type',document.getElementById('v-type').value);
+  fd.append('brand',document.getElementById('v-brand').value.trim());
+  fd.append('model',document.getElementById('v-model').value.trim());
+  fd.append('hourly_rate',document.getElementById('v-rate').value);
+  fd.append('fuel_type',document.getElementById('v-fuel').value);
+  fd.append('seating_capacity',document.getElementById('v-seats').value||2);
+  fd.append('license_plate',document.getElementById('v-plate').value.trim().toUpperCase());
+  fd.append('location',document.getElementById('v-loc').value.trim()||'Campus');
+  fd.append('description',document.getElementById('v-desc').value.trim());
+  try{
+    const r=await fetch(`${API}/api/vehicles`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:fd,signal:AbortSignal.timeout(8000)});
+    const d=await r.json();
+    if(r.ok){closeVM();toast('✅ Vehicle listed!');await loadAll();}
+    else{showMsg('vm-msg',d.detail||'Failed','error');btn.textContent='🚀 List Vehicle';btn.disabled=false;}
+  }catch(ex){showMsg('vm-msg','Server error: '+ex.message,'error');btn.textContent='🚀 List Vehicle';btn.disabled=false;}
+});
+
+// ── Edit Vehicle ──
+function openEM(vid,loc,desc){
+  document.getElementById('em-vid').value=vid;
+  document.getElementById('em-loc').value=loc;
+  document.getElementById('em-desc').value=desc;
+  document.getElementById('em-rate').value='';
+  showMsg('em-msg','','');
+  document.getElementById('edit-modal').classList.add('open');
+}
+function closeEM(){document.getElementById('edit-modal').classList.remove('open');}
+async function submitEdit(){
+  const vid=document.getElementById('em-vid').value;
+  const fd=new FormData();
+  const rate=document.getElementById('em-rate').value;
+  if(rate)fd.append('hourly_rate',rate);
+  fd.append('location',document.getElementById('em-loc').value||'Campus');
+  fd.append('description',document.getElementById('em-desc').value);
+  try{
+    const r=await fetch(`${API}/api/vehicles/${vid}`,{method:'PUT',headers:{Authorization:`Bearer ${token}`},body:fd});
+    const d=await r.json();
+    if(r.ok){closeEM();toast('✅ Updated!');await loadAll();}
+    else showMsg('em-msg',d.detail||'Failed','error');
+  }catch{showMsg('em-msg','Server error','error');}
+}
+
+async function toggleAvail(id,current){
+  const ns=current==='Available'?'Maintenance':'Available';
+  const fd=new FormData();fd.append('availability_status',ns);
+  await fetch(`${API}/api/vehicles/${id}`,{method:'PUT',headers:{Authorization:`Bearer ${token}`},body:fd});
+  await loadAll();toast(`Status → ${ns}`);
+}
+
+async function delVehicle(id,name){
+  if(!confirm(`Delete "${name}"?`))return;
+  const r=await fetch(`${API}/api/vehicles/${id}`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}});
+  const d=await r.json();
+  if(r.ok){toast('✅ Deleted');await loadAll();}
+  else toast(d.detail||'Failed');
+}
+
+// ── Maintenance ──
+function openMaintModal(){document.getElementById('maint-modal').classList.add('open');}
+function closeMM(){document.getElementById('maint-modal').classList.remove('open');}
+async function submitMaint(){
+  const fd=new FormData();
+  fd.append('vehicle_id',document.getElementById('mm-vid').value);
+  fd.append('maintenance_type',document.getElementById('mm-type').value);
+  fd.append('description',document.getElementById('mm-desc').value);
+  try{
+    const r=await fetch(`${API}/api/maintenance`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:fd});
+    const d=await r.json();
+    if(r.ok){closeMM();toast('🔧 Maintenance reported');await loadAll();}
+    else showMsg('mm-msg',d.detail||'Failed','error');
+  }catch{showMsg('mm-msg','Server error','error');}
+}
+async function completeMaint(id){
+  const fd=new FormData();fd.append('cost',0);
+  await fetch(`${API}/api/maintenance/${id}/complete`,{method:'PUT',headers:{Authorization:`Bearer ${token}`},body:fd});
+  toast('✅ Maintenance completed');await loadAll();
+  renderMaint();
+}
+
+// ── AI Intelligence (Dynamic Pricing, Predictive Maintenance, Demand Forecast) ──
+async function calcDynamicPrice() {
+  const vType = document.getElementById('pricing-type').value || 'Scooter';
+  const baseRate = parseFloat(document.getElementById('pricing-base').value) || 50;
+  const resEl = document.getElementById('pricing-result');
+  if(!resEl) return;
+  resEl.innerHTML = '<span style="color:var(--text-muted)">🤖 Calculating optimal price using ML elasticity model...</span>';
+  try {
+    const r = await fetch(`${API}/api/ml/pricing/suggest?vehicle_type=${encodeURIComponent(vType)}&base_rate=${baseRate}&available_count=4`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const d = await r.json();
+    const mult = d.multiplier || 1.0;
+    const isSurge = mult > 1.05;
+    const isDiscount = mult < 0.95;
+    const badgeCls = isSurge ? 'badge-red' : isDiscount ? 'badge-blue' : 'badge-green';
+    const badgeText = isSurge ? `🔥 ${mult}x Surge` : isDiscount ? `🏷️ ${mult}x Discount` : `⚖️ Standard Rate (${mult}x)`;
+
+    resEl.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:0.75rem">
+        <div>
+          <span style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em">Recommended Hourly Price</span>
+          <div style="font-size:1.8rem;font-weight:800;color:var(--accent-green)">₹${d.suggested_rate} <span style="font-size:0.9rem;font-weight:400;color:var(--text-muted)">/ hour</span></div>
+        </div>
+        <div style="text-align:right">
+          <span class="badge ${badgeCls}">${badgeText}</span>
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.25rem">Optimal Range: ${d.price_range || `₹${Math.round(baseRate*0.8)} - ₹${Math.round(baseRate*1.5)}`}</div>
+        </div>
+      </div>
+      <div style="font-size:0.85rem;color:var(--text-secondary);background:rgba(255,255,255,0.02);padding:0.6rem 0.8rem;border-radius:8px;border-left:3px solid var(--accent-blue)">
+        💡 <strong>AI Market Signal:</strong> ${d.reason || 'Optimal pricing generated based on current campus demand and fleet utilization.'}
+      </div>
+    `;
+  } catch (err) {
+    resEl.innerHTML = '<span style="color:var(--text-muted)">Could not load dynamic pricing. Using default rate.</span>';
+  }
+}
+
+async function loadPredictiveMaintenance(isManual=false) {
+  const el = document.getElementById('ai-maint-container');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--text-muted)">🤖 Running ML health analysis on fleet vehicles...</div>';
+  try {
+    const r = await fetch(`${API}/api/ml/maintenance/fleet-health`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const d = await r.json();
+    const myIds = new Set(vehicles.map(v => v.vehicle_id));
+    const list = (d.vehicles || []).filter(v => myIds.size === 0 || myIds.has(v.vehicle_id));
+
+    if (!list.length) {
+      el.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text-muted)">No vehicles listed yet to analyze. Add a vehicle to see predictive health scores.</div>';
+      return;
+    }
+
+    const avgHealth = Math.round(list.reduce((acc, x) => acc + (x.health_score || 80), 0) / list.length);
+    const highRiskCount = list.filter(x => x.risk_level === 'High').length;
+
+    let html = `
+      <div style="display:flex;gap:1.5rem;margin-bottom:1.25rem;flex-wrap:wrap">
+        <div style="background:var(--bg-surface);padding:0.75rem 1.25rem;border-radius:10px;border:1px solid var(--glass-border)">
+          <div style="font-size:0.75rem;color:var(--text-muted)">FLEET AVERAGE HEALTH</div>
+          <div style="font-size:1.4rem;font-weight:800;color:${avgHealth>70?'var(--accent-green)':'#ffd166'}">${avgHealth}%</div>
+        </div>
+        <div style="background:var(--bg-surface);padding:0.75rem 1.25rem;border-radius:10px;border:1px solid var(--glass-border)">
+          <div style="font-size:0.75rem;color:var(--text-muted)">HIGH RISK VEHICLES</div>
+          <div style="font-size:1.4rem;font-weight:800;color:${highRiskCount>0?'#ff6b77':'var(--accent-green)'}">${highRiskCount}</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Vehicle</th>
+              <th>Health Score</th>
+              <th>Breakdown Risk</th>
+              <th>Total Hours / Trips</th>
+              <th>AI Diagnostic Recommendation</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    list.forEach(item => {
+      const riskCls = item.risk_level === 'High' ? 'badge-red' : item.risk_level === 'Moderate' ? 'badge-gold' : 'badge-green';
+      const healthColor = item.health_score >= 75 ? 'var(--accent-green)' : item.health_score >= 50 ? '#ffd166' : '#ff6b77';
+      const isUrgent = item.risk_level === 'High';
+      html += `
+        <tr>
+          <td>
+            <strong>${item.brand} ${item.model}</strong>
+            <div style="font-size:0.75rem;color:var(--text-muted)">${item.license_plate} · ${item.vehicle_type}</div>
+          </td>
+          <td>
+            <div style="display:flex;align-items:center;gap:0.5rem">
+              <div style="font-weight:700;color:${healthColor}">${item.health_score}%</div>
+              <div style="flex:1;background:rgba(255,255,255,0.1);height:6px;border-radius:3px;min-width:60px;overflow:hidden">
+                <div style="width:${item.health_score}%;background:${healthColor};height:100%"></div>
+              </div>
+            </div>
+          </td>
+          <td><span class="badge ${riskCls}">${item.risk_level} (${item.risk_percentage}%)</span></td>
+          <td style="font-size:0.85rem;color:var(--text-secondary)">${item.total_rental_hours || 0} hrs / ${item.total_trips || 0} trips</td>
+          <td style="font-size:0.85rem">${item.status_text || 'Normal wear'}</td>
+          <td>
+            <button class="btn ${isUrgent?'btn-primary':'btn-ghost'} btn-sm" onclick="quickReportMaint(${item.vehicle_id})">🔧 Inspect</button>
+          </td>
+        </tr>
+      `;
+    });
+
+    html += '</tbody></table></div>';
+    el.innerHTML = html;
+    if(isManual) toast('🔧 Fleet maintenance analysis updated');
+  } catch (err) {
+    el.innerHTML = '<div style="color:var(--text-muted)">Failed to fetch predictive maintenance telemetry.</div>';
+  }
+}
+
+function quickReportMaint(vid) {
+  openMaintModal();
+  const select = document.getElementById('mm-vid');
+  if(select) select.value = vid;
+}
+
+async function loadDemandForecast(isManual=false) {
+  const el = document.getElementById('ai-demand-container');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--text-muted)">🤖 Calculating tomorrow\'s campus rental demand...</div>';
+  try {
+    const r = await fetch(`${API}/api/ml/demand-prediction`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const d = await r.json();
+    if(isManual) toast('📈 Demand forecast updated');
+    const preds = d.predictions || [];
+
+    let html = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem;margin-bottom:1.5rem">
+    `;
+
+    preds.forEach(p => {
+      const icon = EMOJIS[p.vehicle_type] || '🚗';
+      const statusBadge = p.status === 'High' ? 'badge-red' : p.status === 'Medium' ? 'badge-gold' : 'badge-cyan';
+      html += `
+        <div style="background:var(--bg-surface);padding:1rem;border-radius:10px;border:1px solid var(--glass-border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+            <span style="font-size:1.4rem">${icon}</span>
+            <span class="badge ${statusBadge}">${p.status} Demand</span>
+          </div>
+          <div style="font-weight:700;font-size:1rem">${p.vehicle_type}</div>
+          <div style="font-size:1.3rem;font-weight:800;color:var(--text-primary);margin:0.25rem 0">${p.predicted_rentals} <span style="font-size:0.8rem;color:var(--text-muted);font-weight:400">est. bookings</span></div>
+          <div style="background:rgba(255,255,255,0.1);height:5px;border-radius:3px;overflow:hidden;margin-top:0.5rem">
+            <div style="width:${p.demand_percentage}%;background:var(--accent-blue);height:100%"></div>
+          </div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.35rem">${p.demand_percentage}% of campus volume</div>
+        </div>
+      `;
+    });
+
+    html += '</div>';
+
+    if (d.insights && d.insights.length) {
+      html += `
+        <div style="background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.2);padding:1rem;border-radius:10px">
+          <div style="font-weight:700;font-size:0.9rem;margin-bottom:0.5rem;color:var(--accent-cyan)">📈 Strategic Fleet Insights</div>
+          <ul style="margin:0;padding-left:1.2rem;font-size:0.85rem;color:var(--text-secondary);display:flex;flex-direction:column;gap:0.4rem">
+            ${d.insights.map(i => `<li>${i}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+    }
+
+    el.innerHTML = html;
+  } catch (err) {
+    el.innerHTML = '<div style="color:var(--text-muted)">Unable to load demand predictions at this time.</div>';
+  }
+}
+
+// ── Utilities ──
+function showMsg(id,msg,type){
+  const el=document.getElementById(id);if(!el)return;
+  el.textContent=msg;el.style.display=msg?'block':'none';
+  el.className='msg-box '+(type==='error'?'msg-error':'msg-success');
+}
+function toast(msg){
+  let t=document.getElementById('toast');
+  if(!t){t=document.createElement('div');t.id='toast';t.style.cssText='position:fixed;bottom:2rem;right:2rem;background:var(--bg-elevated);border:1px solid var(--glass-border);color:var(--text-primary);padding:.9rem 1.5rem;border-radius:12px;font-size:.9rem;z-index:9999;box-shadow:var(--shadow-md);transition:opacity .3s;';document.body.appendChild(t);}
+  t.textContent=msg;t.style.opacity='1';
+  clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity='0',3000);
+}
+
+loadAll();
+</script>
+</body>
+</html>

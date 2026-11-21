@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — CampusRide</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    .tbl{width:100%;border-collapse:collapse;}
+    .tbl th{text-align:left;padding:.7rem 1rem;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--glass-border);}
+    .tbl td{padding:.85rem 1rem;border-bottom:1px solid var(--border-subtle);font-size:.875rem;}
+    .tbl tr:last-child td{border-bottom:none;}
+    .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:600;}
+    .badge-green{background:rgba(0,229,160,.15);color:#00e5a0;}
+    .badge-blue{background:rgba(108,99,255,.2);color:#a89cff;}
+    .badge-red{background:rgba(255,79,94,.15);color:#ff6b77;}
+    .badge-gold{background:rgba(255,209,102,.15);color:#ffd166;}
+    .badge-cyan{background:rgba(0,212,255,.15);color:#00d4ff;}
+    .empty-state{text-align:center;padding:3rem 2rem;color:var(--text-muted);}
+    .bar-wrap{background:var(--bg-surface);border-radius:8px;height:10px;overflow:hidden;margin-top:.4rem;}
+    .bar-fill{background:var(--grad-primary);height:100%;border-radius:8px;transition:width .6s ease;}
+  </style>
+</head>
+<body>
+<div class="dashboard-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">🏍️ CampusRide</div>
+    <span class="sidebar-section-label">ADMIN</span>
+    <a href="#" class="sidebar-item active" onclick="show('stats',this)"><span class="icon">📊</span> Statistics</a>
+    <a href="#" class="sidebar-item" onclick="show('students',this)"><span class="icon">👥</span> Students</a>
+    <a href="#" class="sidebar-item" onclick="show('vehicles',this)"><span class="icon">🚗</span> Vehicles</a>
+    <a href="#" class="sidebar-item" onclick="show('rentals',this)"><span class="icon">📋</span> Rentals</a>
+    <a href="#" class="sidebar-item" onclick="show('payments',this)"><span class="icon">💳</span> Payments</a>
+    <a href="#" class="sidebar-item" onclick="show('revenue',this)"><span class="icon">📈</span> Revenue</a>
+    <span class="sidebar-section-label">SECURITY & AIML</span>
+    <a href="#" class="sidebar-item" onclick="show('security',this)"><span class="icon">🛡️</span> Audit Logs</a>
+    <a href="#" class="sidebar-item" onclick="show('fraud',this)"><span class="icon">🤖</span> AIML Fraud & Trust</a>
+    <a href="#" class="sidebar-item" onclick="show('geofence',this)"><span class="icon">🛰️</span> Campus Geofence</a>
+    <a href="#" class="sidebar-item" onclick="show('aiml-suite',this)"><span class="icon">🧠</span> AIML Intelligence Suite</a>
+    <span class="sidebar-section-label">ACCOUNT</span>
+    <a href="login.html" class="sidebar-item" onclick="sessionStorage.clear()"><span class="icon">🚪</span> Logout</a>
+  </aside>
+
+
+  <main class="dashboard-main">
+    <div class="dashboard-header">
+      <div>
+        <div class="dashboard-greeting">👑 Admin Panel</div>
+        <div class="dashboard-username">System Administration</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="refreshAdminView()">🔄 Refresh</button>
+    </div>
+
+    <!-- Stats -->
+    <div id="section-stats">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value" id="s-students">—</div><div class="stat-label">Total Students</div></div>
+        <div class="stat-card"><div class="stat-icon">🚗</div><div class="stat-value" id="s-vehicles">—</div><div class="stat-label">Total Vehicles</div></div>
+        <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-value" id="s-rentals">—</div><div class="stat-label">Total Rentals</div></div>
+        <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value" id="s-revenue">—</div><div class="stat-label">Total Revenue</div></div>
+      </div>
+      <div class="stats-grid" style="margin-top:1rem">
+        <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-value" id="s-active">—</div><div class="stat-label">Active Rentals</div></div>
+        <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value" id="s-available">—</div><div class="stat-label">Available Vehicles</div></div>
+        <div class="stat-card"><div class="stat-icon">⭐</div><div class="stat-value" id="s-verified">100%</div><div class="stat-label">Verified Members</div></div>
+        <div class="stat-card"><div class="stat-icon">🎯</div><div class="stat-value" id="s-occ">—</div><div class="stat-label">Occupancy Rate</div></div>
+      </div>
+    </div>
+
+    <!-- Students -->
+    <div id="section-students" style="display:none">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+          <h2 style="font-size:1.2rem;font-weight:700;margin:0">👥 All Students</h2>
+          <button class="btn btn-ghost btn-sm" onclick="loadStudents(true)">🔄 Refresh</button>
+        </div>
+        <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Department</th><th>Role</th><th>Trust</th><th>Actions</th></tr></thead>
+        <tbody id="students-table"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- Vehicles -->
+    <div id="section-vehicles" style="display:none">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+          <h2 style="font-size:1.2rem;font-weight:700;margin:0">🚗 All Vehicles</h2>
+          <button class="btn btn-ghost btn-sm" onclick="loadVehicles(true)">🔄 Refresh</button>
+        </div>
+        <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>ID</th><th>Vehicle</th><th>Owner</th><th>Rate</th><th>Location</th><th>Rating</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="vehicles-table"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- Rentals -->
+    <div id="section-rentals" style="display:none">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+          <h2 style="font-size:1.2rem;font-weight:700;margin:0">📋 All Rentals</h2>
+          <button class="btn btn-ghost btn-sm" onclick="loadRentals(true)">🔄 Refresh</button>
+        </div>
+        <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>ID</th><th>Vehicle</th><th>Renter</th><th>Start</th><th>Hours</th><th>Amount</th><th>Status</th></tr></thead>
+        <tbody id="rentals-table"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- Payments -->
+    <div id="section-payments" style="display:none">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+          <h2 style="font-size:1.2rem;font-weight:700;margin:0">💳 All Payments</h2>
+          <button class="btn btn-ghost btn-sm" onclick="loadPayments(true)">🔄 Refresh</button>
+        </div>
+        <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>ID</th><th>Renter</th><th>Method</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody id="payments-table"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- Revenue -->
+    <div id="section-revenue" style="display:none">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+          <h2 style="font-size:1.2rem;font-weight:700;margin:0">📈 Revenue Report</h2>
+          <button class="btn btn-ghost btn-sm" onclick="loadRevenue(true)">🔄 Refresh</button>
+        </div>
+        <div id="revenue-content">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Security & Audit Logs -->
+    <div id="section-security" style="display:none">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:1rem">
+          <div>
+            <h2 style="font-size:1.2rem;font-weight:700">🛡️ Immutable Audit Trail</h2>
+            <p style="color:var(--text-muted);font-size:0.85rem">Cryptographic & sequential log of system logins, lockout events, bookings, payments, and security alerts.</p>
+          </div>
+          <div style="display:flex;gap:0.5rem">
+            <select id="audit-filter" class="form-control" style="padding:0.4rem 0.8rem;font-size:0.85rem;" onchange="loadAuditLogs(this.value)">
+              <option value="">All Actions</option>
+              <option value="LOGIN">Logins</option>
+              <option value="FAILED_LOGIN">Failed Logins</option>
+              <option value="ACCOUNT_LOCKED">Account Lockouts</option>
+              <option value="BOOK_VEHICLE">Bookings</option>
+              <option value="START_RENTAL">Rental Starts</option>
+              <option value="CANCEL_RENTAL">Cancellations</option>
+              <option value="GEOFENCE_ALERT">Geofence Breaches</option>
+              <option value="SECURITY_VIOLATION">Violations</option>
+            </select>
+            <button class="btn btn-ghost btn-sm" onclick="loadAuditLogs('', true)">🔄 Refresh</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Timestamp</th>
+                <th>Action</th>
+                <th>User / Roll No</th>
+                <th>Details</th>
+                <th>Client IP</th>
+              </tr>
+            </thead>
+            <tbody id="audit-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- AIML Fraud & Trust Analysis -->
+    <div id="section-fraud" style="display:none">
+      <div class="card" style="margin-bottom:1.5rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:1rem">
+          <div>
+            <h2 style="font-size:1.2rem;font-weight:700">🤖 AIML Fraud & Anomaly Detection</h2>
+            <p style="color:var(--text-muted);font-size:0.85rem">Detects abnormal booking velocity spikes, suspicious cancellation rates, payment chargebacks, and computes Trust Scores.</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadFraudAnalysis(true)">🔄 Re-run Model</button>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value" id="f-total">—</div><div class="stat-label">Students Analyzed</div></div>
+          <div class="stat-card"><div class="stat-icon">🚨</div><div class="stat-value" style="color:var(--accent-red)" id="f-high">—</div><div class="stat-label">Suspicious / High Risk</div></div>
+          <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-value" style="color:var(--accent-gold)" id="f-mod">—</div><div class="stat-label">Moderate Risk</div></div>
+          <div class="stat-card"><div class="stat-icon">⭐</div><div class="stat-value" style="color:var(--accent-green)" id="f-safe">—</div><div class="stat-label">Normal / Verified</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem">Student Risk & Trust Assessment Matrix</h3>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Roll No</th>
+                <th>Student</th>
+                <th>Velocity (24h)</th>
+                <th>Cancel %</th>
+                <th>Status Flags</th>
+                <th>Risk Score</th>
+                <th>Trust Score</th>
+                <th>Account Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="fraud-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Campus Geofencing -->
+    <div id="section-geofence" style="display:none">
+      <div class="card" style="margin-bottom:1.5rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem">
+          <div>
+            <h2 style="font-size:1.2rem;font-weight:700">🛰️ Campus Geofencing & Perimeter Monitoring</h2>
+            <p style="color:var(--text-muted);font-size:0.85rem">Live GPS telemetry and coordinate monitoring ensuring campus vehicles remain within authorized academic boundaries.</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="simulateBreach()">⚡ Simulate Breach (Live Demo)</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem;margin-top:1.25rem">
+          <div style="background:var(--bg-surface);padding:1rem;border-radius:10px;border:1px solid var(--glass-border)">
+            <small style="color:var(--text-muted)">CAMPUS CENTER</small>
+            <div style="font-weight:700;margin-top:0.3rem">Lat 13.0020, Lng 80.2350</div>
+          </div>
+          <div style="background:var(--bg-surface);padding:1rem;border-radius:10px;border:1px solid var(--glass-border)">
+            <small style="color:var(--text-muted)">PERIMETER BOUNDARY</small>
+            <div style="font-weight:700;margin-top:0.3rem">Radius ~2.5 km (Campus Zone)</div>
+          </div>
+          <div style="background:var(--bg-surface);padding:1rem;border-radius:10px;border:1px solid var(--glass-border)">
+            <small style="color:var(--text-muted)">GPS TELEMETRY</small>
+            <div style="font-weight:700;color:var(--accent-green);margin-top:0.3rem">🟢 Active & Enforced</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <h3 style="font-size:1rem;font-weight:700">🚨 Geofence Boundary Breach Alerts</h3>
+          <button class="btn btn-ghost btn-sm" onclick="loadGeofenceAlerts(true)">🔄 Refresh</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Alert ID</th>
+                <th>Vehicle</th>
+                <th>Plate</th>
+                <th>Renter</th>
+                <th>Breach GPS</th>
+                <th>Alert Message</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="geofence-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- AIML Intelligence Suite -->
+    <div id="section-aiml-suite" style="display:none">
+      <!-- Overview & Active Models Status -->
+      <div class="card" style="margin-bottom:1.5rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem">
+          <div>
+            <h2 style="font-size:1.2rem;font-weight:700">🧠 CampusRide AIML Core & Predictive Intelligence</h2>
+            <p style="color:var(--text-muted);font-size:0.85rem">Integrated machine learning pipelines: Recommendation, Time-Series Demand Forecasting, Fleet Degradation Models, and Isolation Forest Fraud Detection.</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadAIMLSuite(true)">🔄 Refresh All Telemetry</button>
+        </div>
+        <div class="stats-grid" id="aiml-stats-grid">
+          <div class="stat-card"><div class="stat-icon">🚗</div><div class="stat-value" id="ml-stat-rec" style="font-size:1.1rem;color:var(--accent-green)">Active</div><div class="stat-label">Smart Recommender</div></div>
+          <div class="stat-card"><div class="stat-icon">📈</div><div class="stat-value" id="ml-stat-demand" style="font-size:1.1rem;color:var(--accent-green)">Trained</div><div class="stat-label">Demand Predictor</div></div>
+          <div class="stat-card"><div class="stat-icon">🔧</div><div class="stat-value" id="ml-stat-maint" style="font-size:1.1rem;color:var(--accent-green)">Active</div><div class="stat-label">Predictive Health</div></div>
+          <div class="stat-card"><div class="stat-icon">🛡️</div><div class="stat-value" id="ml-stat-fraud" style="font-size:1.1rem;color:var(--accent-green)">Active</div><div class="stat-label">Isolation Forest</div></div>
+        </div>
+      </div>
+
+      <!-- Campus Hotspots & Fleet Rebalancing -->
+      <div class="card" style="margin-bottom:1.5rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem">
+          <div>
+            <h3 style="font-size:1.1rem;font-weight:700">📍 Campus Demand Hotspots & Vehicle Rebalancing</h3>
+            <p style="color:var(--text-muted);font-size:0.85rem">Predicts live footfall and student rental demand across campus zones.</p>
+          </div>
+          <span class="badge badge-cyan" id="aiml-current-hour">Live Window</span>
+        </div>
+        <div id="aiml-hotspots-container">Loading campus hotspots...</div>
+      </div>
+
+      <!-- Predictive Fleet Maintenance Matrix -->
+      <div class="card" style="margin-bottom:1.5rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem">
+          <div>
+            <h3 style="font-size:1.1rem;font-weight:700">🔧 Campus-Wide Predictive Maintenance Telemetry</h3>
+            <p style="color:var(--text-muted);font-size:0.85rem">Real-time wear and failure risk scoring across all listed vehicles to prevent breakdowns.</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadAIMLFleetHealth(true)">🔄 Refresh</button>
+        </div>
+        <div id="aiml-fleet-container">Loading fleet telemetry...</div>
+      </div>
+
+      <!-- Isolation Forest Payment Anomaly Sandbox -->
+      <div class="card">
+        <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:0.5rem">🛡️ Isolation Forest Payment Anomaly Sandbox</h3>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1.25rem">Test transactional payments against the unsupervised Isolation Forest model trained on campus rental behaviors.</p>
+        
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:end;margin-bottom:1.25rem">
+          <div class="form-group" style="margin:0;flex:1;min-width:200px">
+            <label class="form-label">Test Payment Amount (₹)</label>
+            <input type="number" id="test-anomaly-amount" class="form-control" value="8500" placeholder="e.g. 150, 4500, 12000">
+          </div>
+          <button class="btn btn-primary" onclick="testPaymentAnomaly()">🧪 Run Isolation Forest Inference</button>
+          <button class="btn btn-ghost" onclick="scanBatchAnomalies()">⚡ Scan Live Payments DB</button>
+        </div>
+        <div id="anomaly-test-result" style="background:var(--bg-surface);padding:1rem;border-radius:10px;border:1px solid var(--glass-border);display:none"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const API='http://localhost:15501';
+const token=sessionStorage.getItem('token');
+if(!token){window.location.href='login.html';}
+
+const BC={Confirmed:'badge-blue',Active:'badge-green',Completed:'badge-cyan',Cancelled:'badge-red'};
+const PC={Pending:'badge-gold',Completed:'badge-green',Failed:'badge-red',Refunded:'badge-cyan'};
+
+let currentSection = 'stats';
+function show(name,el){
+  currentSection = name;
+  document.querySelectorAll('[id^="section-"]').forEach(s=>s.style.display='none');
+  document.getElementById('section-'+name).style.display='block';
+  document.querySelectorAll('.sidebar-item').forEach(i=>i.classList.remove('active'));
+  if(el)el.classList.add('active');
+  if(name==='students')loadStudents();
+  if(name==='vehicles')loadVehicles();
+  if(name==='rentals')loadRentals();
+  if(name==='payments')loadPayments();
+  if(name==='revenue')loadRevenue();
+  if(name==='security')loadAuditLogs();
+  if(name==='fraud')loadFraudAnalysis();
+  if(name==='geofence')loadGeofenceAlerts();
+  if(name==='aiml-suite')loadAIMLSuite();
+}
+
+async function refreshAdminView(){
+  toast('🔄 Refreshing admin panel...');
+  await loadAll();
+  if(currentSection==='students') await loadStudents(true);
+  else if(currentSection==='vehicles') await loadVehicles(true);
+  else if(currentSection==='rentals') await loadRentals(true);
+  else if(currentSection==='payments') await loadPayments(true);
+  else if(currentSection==='revenue') await loadRevenue(true);
+  else if(currentSection==='security') await loadAuditLogs('', true);
+  else if(currentSection==='fraud') await loadFraudAnalysis(true);
+  else if(currentSection==='geofence') await loadGeofenceAlerts(true);
+  else if(currentSection==='aiml-suite') await loadAIMLSuite(true);
+  else toast('✅ Overview stats updated!');
+}
+
+const afetch=async(url,opts={})=>{const r=await fetch(API+url,{headers:{Authorization:`Bearer ${token}`,...(opts.headers||{})},signal:AbortSignal.timeout(8000),...opts});return r;};
+
+async function loadAll(){
+  const r=await afetch('/api/admin/stats');
+  if(!r.ok){if(r.status===403){document.body.innerHTML='<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-family:Inter,sans-serif;color:#f0f2ff;background:#0a0e1a;text-align:center"><div><div style="font-size:3rem">🔒</div><h2>Admin Access Required</h2><p style="color:#8892b0">Log in with admin credentials</p><a href="login.html" style="color:#6c63ff">← Go to Login</a></div></div>';return;}}
+  const d=await r.json();
+  document.getElementById('s-students').textContent=d.total_students||0;
+  document.getElementById('s-vehicles').textContent=d.total_vehicles||0;
+  document.getElementById('s-rentals').textContent=d.total_rentals||0;
+  document.getElementById('s-revenue').textContent='₹'+(d.total_revenue||0).toFixed(0);
+  document.getElementById('s-active').textContent=d.active_rentals||0;
+  document.getElementById('s-available').textContent=d.available_vehicles||0;
+  const occ=d.total_vehicles>0?Math.round(((d.total_vehicles-d.available_vehicles)/d.total_vehicles)*100):0;
+  document.getElementById('s-occ').textContent=occ+'%';
+}
+
+async function loadStudents(isManual=false){
+  const r=await afetch('/api/admin/students');
+  const data=await r.json();
+  document.getElementById('students-table').innerHTML=data.map(s=>`<tr>
+    <td>${s.student_id}</td>
+    <td><strong>${s.full_name}</strong><br><small style="color:var(--text-muted)">Roll: ${s.roll_number||'N/A'}</small></td>
+    <td>${s.email}</td>
+    <td>${s.department}</td>
+    <td><span class="badge ${s.role==='admin'?'badge-red':s.role==='owner'?'badge-blue':'badge-green'}">${s.role}</span></td>
+    <td>⭐${(s.trust_score||5).toFixed(1)}</td>
+    <td>
+      <select onchange="changeRole(${s.student_id},this.value)" class="form-control" style="padding:.3rem .5rem;font-size:.8rem;width:auto">
+        <option value="student" ${s.role==='student'?'selected':''}>Student</option>
+        <option value="owner" ${s.role==='owner'?'selected':''}>Owner</option>
+        <option value="admin" ${s.role==='admin'?'selected':''}>Admin</option>
+      </select>
+    </td>
+  </tr>`).join('');
+  if(isManual) toast('👥 Students list updated');
+}
+
+
+async function changeRole(id,role){
+  const fd=new FormData();fd.append('role',role);
+  const r=await afetch(`/api/admin/students/${id}/role`,{method:'PUT',body:fd});
+  const d=await r.json();
+  toast(r.ok?`✅ Role → ${role}`:d.detail||'Failed');
+}
+
+async function loadVehicles(isManual=false){
+  const r=await afetch('/api/admin/vehicles');
+  const data=await r.json();
+  const SC={Available:'badge-green',Rented:'badge-blue',Maintenance:'badge-gold'};
+  document.getElementById('vehicles-table').innerHTML=data.map(v=>`<tr>
+    <td>${v.vehicle_id}</td>
+    <td><strong>${v.brand} ${v.model}</strong><br><small style="color:var(--text-muted)">${v.vehicle_type}</small></td>
+    <td>${v.owner_name}</td>
+    <td>₹${v.hourly_rate}/hr</td>
+    <td>📍${v.location||'Campus'}</td>
+    <td>⭐${(v.avg_rating||0).toFixed(1)}</td>
+    <td><span class="badge ${SC[v.availability_status]||'badge-cyan'}">${v.availability_status}</span></td>
+    <td>
+      ${!v.is_approved?`<button onclick="approveVehicle(${v.vehicle_id})" class="btn btn-primary btn-sm">Approve</button>`:''}
+      <button onclick="deleteVehicle(${v.vehicle_id},'${v.brand} ${v.model}')" class="btn btn-ghost btn-sm" style="color:var(--accent-red)">🗑️</button>
+    </td>
+  </tr>`).join('');
+  if(isManual) toast('🚗 Vehicles list updated');
+}
+
+async function approveVehicle(id){
+  await afetch(`/api/admin/vehicles/${id}/approve`,{method:'PUT'});toast('✅ Vehicle approved');loadVehicles();}
+async function deleteVehicle(id,name){
+  if(!confirm(`Delete "${name}"?`))return;
+  const r=await afetch(`/api/admin/vehicles/${id}`,{method:'DELETE'});
+  const d=await r.json();
+  if(r.ok){toast('✅ Deleted');loadVehicles();}else toast(d.detail||'Failed');
+}
+
+async function loadRentals(isManual=false){
+  const r=await afetch('/api/admin/rentals');const data=await r.json();
+  document.getElementById('rentals-table').innerHTML=data.map(b=>`<tr>
+    <td>${b.rental_id}</td>
+    <td><strong>${b.vehicle_name}</strong></td>
+    <td>${b.renter_name}</td>
+    <td>${new Date(b.start_time).toLocaleDateString()}</td>
+    <td>${(b.total_hours||0).toFixed(1)}h</td>
+    <td><strong>₹${(b.final_amount||0).toFixed(0)}</strong></td>
+    <td><span class="badge ${BC[b.status]||'badge-cyan'}">${b.status}</span></td>
+  </tr>`).join('');
+  if(isManual) toast('📋 Rentals list updated');
+}
+
+async function loadPayments(isManual=false){
+  const r=await afetch('/api/admin/payments');const data=await r.json();
+  document.getElementById('payments-table').innerHTML=data.map(p=>`<tr>
+    <td>${p.payment_id}</td>
+    <td>${p.renter_name}</td>
+    <td>${p.payment_method}</td>
+    <td><strong>₹${(p.amount||0).toFixed(0)}</strong></td>
+    <td><span class="badge ${PC[p.payment_status]||'badge-cyan'}">${p.payment_status}</span></td>
+    <td>${new Date(p.payment_date).toLocaleDateString()}</td>
+  </tr>`).join('');
+  if(isManual) toast('💳 Payments list updated');
+}
+
+async function loadRevenue(isManual=false){
+  const r=await afetch('/api/admin/revenue-report');
+  const d=await r.json();
+  const el=document.getElementById('revenue-content');
+  const maxRev=Math.max(1,...(d.by_type||[]).map(t=>t.revenue));
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem">
+      <div style="background:var(--bg-surface);border-radius:12px;padding:1.25rem;text-align:center">
+        <div style="color:var(--text-muted);font-size:.85rem">Total Revenue</div>
+        <div style="font-size:2rem;font-weight:700;color:var(--accent-green)">₹${(d.total_revenue||0).toFixed(0)}</div>
+      </div>
+      <div style="background:var(--bg-surface);border-radius:12px;padding:1.25rem;text-align:center">
+        <div style="color:var(--text-muted);font-size:.85rem">Total Refunds</div>
+        <div style="font-size:2rem;font-weight:700;color:var(--accent-red)">₹${(d.total_refunds||0).toFixed(0)}</div>
+      </div>
+    </div>
+    <h3 style="margin-bottom:1rem;font-size:1rem">Revenue by Vehicle Type</h3>
+    ${(d.by_type||[]).map(t=>`<div style="margin-bottom:1.25rem">
+      <div style="display:flex;justify-content:space-between;margin-bottom:.4rem">
+        <span>${t.type} (${t.rentals} rentals)</span><strong>₹${t.revenue.toFixed(0)}</strong>
+      </div>
+      <div class="bar-wrap"><div class="bar-fill" style="width:${Math.round((t.revenue/maxRev)*100)}%"></div></div>
+    </div>`).join('')}`;
+  if(isManual) toast('📈 Revenue report updated');
+}
+
+async function loadAuditLogs(actionFilter='', isManual=false){
+  const url = actionFilter ? `/api/security/audit-logs?action=${encodeURIComponent(actionFilter)}` : '/api/security/audit-logs';
+  const r = await afetch(url);
+  const data = await r.json();
+  if(isManual) toast('🛡️ Audit logs updated');
+  const AC = {
+    LOGIN: 'badge-green', FAILED_LOGIN: 'badge-red', ACCOUNT_LOCKED: 'badge-red',
+    BOOK_VEHICLE: 'badge-blue', START_RENTAL: 'badge-cyan', CANCEL_RENTAL: 'badge-gold',
+    GEOFENCE_ALERT: 'badge-red', SECURITY_VIOLATION: 'badge-red', REGISTER: 'badge-green'
+  };
+  document.getElementById('audit-table').innerHTML = data.map(log => `<tr>
+    <td>#${log.log_id}</td>
+    <td><small>${new Date(log.timestamp).toLocaleString()}</small></td>
+    <td><span class="badge ${AC[log.action] || 'badge-cyan'}">${log.action}</span></td>
+    <td><strong>${log.student_name}</strong><br><small style="color:var(--text-muted)">Roll: ${log.roll_number}</small></td>
+    <td><small style="color:var(--text-secondary)">${log.details || '—'}</small></td>
+    <td><code>${log.ip_address || '127.0.0.1'}</code></td>
+  </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No audit records found</td></tr>';
+}
+
+async function loadFraudAnalysis(isManual=false){
+  const r = await afetch('/api/security/fraud/analysis');
+  const d = await r.json();
+  if(isManual) toast('🤖 Fraud analysis & trust scores updated');
+  document.getElementById('f-total').textContent = d.total_analyzed || 0;
+  document.getElementById('f-high').textContent = d.high_risk_count || 0;
+  document.getElementById('f-mod').textContent = d.moderate_risk_count || 0;
+  const safeCount = (d.total_analyzed || 0) - (d.high_risk_count || 0) - (d.moderate_risk_count || 0);
+  document.getElementById('f-safe').textContent = Math.max(0, safeCount);
+
+  const RC = {
+    'Suspicious / High Risk': 'badge-red',
+    'Moderate': 'badge-gold',
+    'Normal': 'badge-green'
+  };
+
+  document.getElementById('fraud-table').innerHTML = (d.students || []).map(s => `<tr>
+    <td><code>${s.roll_number}</code></td>
+    <td><strong>${s.full_name}</strong><br><small style="color:var(--text-muted)">${s.email}</small></td>
+    <td>${s.recent_rentals_24h} / day</td>
+    <td>${s.cancellation_rate}%</td>
+    <td><span class="badge ${s.flags.length?'badge-red':'badge-green'}">${s.flags.length ? s.flags.join(', ') : 'Clean'}</span></td>
+    <td>
+      <div style="font-weight:700;color:${s.risk_score>=60?'var(--accent-red)':s.risk_score>=30?'var(--accent-gold)':'var(--accent-green)'}">
+        ${s.risk_score}/100
+      </div>
+      <span class="badge ${RC[s.risk_level] || 'badge-cyan'}">${s.risk_level}</span>
+      ${s.flags.length ? `<div style="font-size:0.7rem;color:var(--accent-red);margin-top:2px">${s.flags.join(', ')}</div>` : ''}
+    </td>
+    <td><strong>⭐ ${s.trust_score}%</strong></td>
+    <td><span class="badge ${s.account_status==='Active'?'badge-green':'badge-red'}">${s.account_status}</span></td>
+    <td>
+      <button onclick="toggleAccountStatus(${s.student_id}, '${s.account_status==='Active'?'Suspended':'Active'}')" class="btn btn-sm ${s.account_status==='Active'?'btn-ghost':'btn-primary'}" style="${s.account_status==='Active'?'color:var(--accent-red)':''}">
+        ${s.account_status==='Active'?'Suspend':'Reactivate'}
+      </button>
+    </td>
+  </tr>`).join('');
+}
+
+async function toggleAccountStatus(studentId, newStatus){
+  const fd = new FormData(); fd.append('status', newStatus);
+  const r = await afetch(`/api/security/students/${studentId}/status`, {method: 'PUT', body: fd});
+  const d = await r.json();
+  if(r.ok){ toast(`✅ Account status set to ${newStatus}`); loadFraudAnalysis(); }
+  else { toast(d.detail || 'Failed'); }
+}
+
+async function loadGeofenceAlerts(isManual=false){
+  const r = await afetch('/api/security/geofence/alerts');
+  const alerts = await r.json();
+  if(isManual) toast('🛰️ Geofence boundary alerts updated');
+  document.getElementById('geofence-table').innerHTML = alerts.map(a => `<tr>
+    <td>#${a.alert_id}</td>
+    <td><strong>${a.vehicle_name}</strong></td>
+    <td><code>${a.license_plate}</code></td>
+    <td>${a.renter_name}<br><small style="color:var(--text-muted)">Roll: ${a.renter_roll}</small></td>
+    <td><small>(${a.latitude.toFixed(4)}, ${a.longitude.toFixed(4)})</small></td>
+    <td><small style="color:var(--accent-red)">${a.alert_message}</small></td>
+    <td><span class="badge ${a.status==='Active'?'badge-red':'badge-green'}">${a.status}</span></td>
+    <td>
+      ${a.status==='Active'?`<button onclick="resolveGeofenceAlert(${a.alert_id})" class="btn btn-primary btn-sm">Resolve</button>`:'<span style="color:var(--text-muted)">Cleared</span>'}
+    </td>
+  </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text-muted)">No active boundary breach alerts. Campus perimeter is secure.</td></tr>';
+}
+
+async function simulateBreach(){
+  const r = await afetch('/api/security/geofence/simulate-breach', {method: 'POST'});
+  const d = await r.json();
+  if(r.ok){
+    toast('🚨 Breach simulated: Vehicle moved outside campus boundary!');
+    loadGeofenceAlerts();
+  } else {
+    toast(d.detail || 'Simulation failed');
+  }
+}
+
+async function resolveGeofenceAlert(alertId){
+  const r = await afetch(`/api/security/geofence/alerts/${alertId}/resolve`, {method: 'PUT'});
+  if(r.ok){
+    toast('✅ Geofence alert marked resolved');
+    loadGeofenceAlerts();
+  }
+}
+
+// ── AIML Intelligence Suite ──
+async function loadAIMLSuite(isManual=false){
+  await Promise.all([loadAIMLStats(), loadAIMLHotspots(), loadAIMLFleetHealth(isManual)]);
+  if(isManual) toast('🧠 AIML Intelligence Suite updated');
+}
+
+async function loadAIMLStats(){
+  try {
+    const r = await afetch('/api/ml/stats');
+    if(r.ok){
+      const d = await r.json();
+      const models = d.models || {};
+      if(models.recommender) document.getElementById('ml-stat-rec').textContent = models.recommender.status || 'Active';
+      if(models.demand_predictor) document.getElementById('ml-stat-demand').textContent = models.demand_predictor.status || 'Trained';
+      if(models.maintenance) document.getElementById('ml-stat-maint').textContent = models.maintenance.status || 'Active';
+      if(models.anomaly_detector) document.getElementById('ml-stat-fraud').textContent = models.anomaly_detector.status || 'Active';
+    }
+  } catch(e){}
+}
+
+async function loadAIMLHotspots(){
+  const el = document.getElementById('aiml-hotspots-container');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--text-muted)">Loading predictive campus demand distribution...</div>';
+  try {
+    const r = await afetch('/api/ml/demand-prediction/locations');
+    const d = await r.json();
+    document.getElementById('aiml-current-hour').textContent = `${d.current_day || 'Today'} · ${d.current_hour || 'Live'}`;
+    const hotspots = d.hotspots || [];
+
+    let html = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1rem;margin-bottom:1.25rem">
+    `;
+
+    hotspots.forEach(h => {
+      const isHigh = h.status === 'High';
+      const isMed = h.status === 'Medium';
+      const statusBadge = isHigh ? 'badge-red' : isMed ? 'badge-gold' : 'badge-green';
+      const barColor = isHigh ? 'var(--accent-red)' : isMed ? '#ffd166' : 'var(--accent-green)';
+      html += `
+        <div style="background:var(--bg-surface);padding:1rem;border-radius:10px;border:1px solid var(--glass-border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+            <strong>📍 ${h.location}</strong>
+            <span class="badge ${statusBadge}">${h.status}</span>
+          </div>
+          <div style="font-size:1.4rem;font-weight:800;color:var(--text-primary)">${h.demand_pct}% <span style="font-size:0.8rem;color:var(--text-muted);font-weight:400">demand share</span></div>
+          <div style="background:rgba(255,255,255,0.1);height:6px;border-radius:3px;overflow:hidden;margin:0.5rem 0">
+            <div style="width:${h.demand_pct}%;background:${barColor};height:100%"></div>
+          </div>
+          <div style="font-size:0.75rem;color:var(--text-muted)">Peak: ${h.peak_window}</div>
+        </div>
+      `;
+    });
+
+    html += '</div>';
+
+    if (d.rebalancing_recommendation) {
+      html += `
+        <div style="background:rgba(255,107,107,0.06);border:1px solid rgba(255,107,107,0.25);padding:1rem 1.25rem;border-radius:10px;display:flex;align-items:center;gap:1rem">
+          <div style="font-size:1.8rem">⚡</div>
+          <div>
+            <div style="font-weight:700;font-size:0.9rem;color:var(--accent-red);margin-bottom:0.2rem">Automated Fleet Rebalancing Advisory</div>
+            <div style="font-size:0.85rem;color:var(--text-secondary)">${d.rebalancing_recommendation}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = '<div style="color:var(--text-muted)">Failed to fetch location demand predictions.</div>';
+  }
+}
+
+async function loadAIMLFleetHealth(isManual=false){
+  const el = document.getElementById('aiml-fleet-container');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--text-muted)">Running vehicle wear & breakdown models...</div>';
+  try {
+    const r = await afetch('/api/ml/maintenance/fleet-health');
+    const d = await r.json();
+    if(isManual) toast('🔧 Fleet predictive health updated');
+    const list = d.vehicles || [];
+
+    let html = `
+      <div style="display:flex;gap:1.5rem;margin-bottom:1.25rem;flex-wrap:wrap">
+        <div style="background:var(--bg-surface);padding:0.75rem 1.25rem;border-radius:10px;border:1px solid var(--glass-border)">
+          <div style="font-size:0.75rem;color:var(--text-muted)">FLEET AVG HEALTH SCORE</div>
+          <div style="font-size:1.4rem;font-weight:800;color:${(d.fleet_avg_health||80)>=70?'var(--accent-green)':'#ffd166'}">${d.fleet_avg_health || 85}%</div>
+        </div>
+        <div style="background:var(--bg-surface);padding:0.75rem 1.25rem;border-radius:10px;border:1px solid var(--glass-border)">
+          <div style="font-size:0.75rem;color:var(--text-muted)">BREAKDOWN RISK VEHICLES</div>
+          <div style="font-size:1.4rem;font-weight:800;color:${(d.high_risk_count||0)>0?'#ff6b77':'var(--accent-green)'}">${d.high_risk_count || 0}</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Vehicle</th>
+              <th>Status</th>
+              <th>Health Score</th>
+              <th>Breakdown Risk</th>
+              <th>ML Diagnostic Prediction</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    list.forEach(v => {
+      const riskBadge = v.risk_level === 'High' ? 'badge-red' : v.risk_level === 'Moderate' ? 'badge-gold' : 'badge-green';
+      const healthColor = v.health_score >= 75 ? 'var(--accent-green)' : v.health_score >= 50 ? '#ffd166' : '#ff6b77';
+      html += `
+        <tr>
+          <td>#${v.vehicle_id}</td>
+          <td><strong>${v.brand} ${v.model}</strong><br><small style="color:var(--text-muted)">${v.license_plate} · ${v.vehicle_type}</small></td>
+          <td><span class="badge ${v.current_status==='Available'?'badge-green':'badge-gold'}">${v.current_status}</span></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:0.5rem">
+              <strong style="color:${healthColor}">${v.health_score}%</strong>
+              <div style="flex:1;background:rgba(255,255,255,0.1);height:6px;border-radius:3px;min-width:60px;overflow:hidden">
+                <div style="width:${v.health_score}%;background:${healthColor};height:100%"></div>
+              </div>
+            </div>
+          </td>
+          <td><span class="badge ${riskBadge}">${v.risk_level} (${v.risk_percentage}%)</span></td>
+          <td style="font-size:0.85rem">${v.status_text || 'Normal operation'}</td>
+        </tr>
+      `;
+    });
+
+    html += '</tbody></table></div>';
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = '<div style="color:var(--text-muted)">Unable to load fleet telemetry.</div>';
+  }
+}
+
+async function testPaymentAnomaly(){
+  const amount = parseFloat(document.getElementById('test-anomaly-amount').value);
+  const resultBox = document.getElementById('anomaly-test-result');
+  if(isNaN(amount)){ toast('Enter a valid amount'); return; }
+
+  resultBox.style.display = 'block';
+  resultBox.innerHTML = '<div style="color:var(--text-muted)">Testing amount against Isolation Forest model...</div>';
+
+  try {
+    const r = await fetch(`${API}/api/ml/anomaly-detect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ amount: amount })
+    });
+    const d = await r.json();
+    const isAnomaly = d.is_anomaly;
+    const badgeCls = isAnomaly ? 'badge-red' : 'badge-green';
+    const borderCls = isAnomaly ? 'rgba(255,79,94,0.3)' : 'rgba(0,229,160,0.3)';
+
+    resultBox.style.borderColor = borderCls;
+    resultBox.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+        <div style="display:flex;align-items:center;gap:0.75rem">
+          <span style="font-size:1.8rem">${isAnomaly ? '🚨' : '✅'}</span>
+          <div>
+            <div style="font-weight:700;font-size:1.05rem;color:${isAnomaly ? 'var(--accent-red)' : 'var(--accent-green)'}">
+              ${isAnomaly ? 'Anomaly Detected (Flagged by Isolation Forest)' : 'Normal Transaction Pattern'}
+            </div>
+            <div style="font-size:0.8rem;color:var(--text-muted)">Amount tested: ₹${amount.toFixed(2)}</div>
+          </div>
+        </div>
+        <span class="badge ${badgeCls}">${d.risk_level} Risk</span>
+      </div>
+      <div style="font-size:0.85rem;color:var(--text-secondary);background:rgba(255,255,255,0.02);padding:0.6rem 0.8rem;border-radius:8px">
+        <strong>Model Diagnosis:</strong> ${d.message || (isAnomaly ? 'Amount deviates significantly from standard student campus rental distribution.' : 'Transaction falls within normal campus payment bounds.')}
+        ${d.anomaly_score !== undefined ? `<div style="margin-top:0.25rem;font-size:0.75rem;color:var(--text-muted)">Isolation Forest Decision Score: <code>${d.anomaly_score.toFixed(4)}</code></div>` : ''}
+      </div>
+    `;
+  } catch (e) {
+    resultBox.innerHTML = '<div style="color:var(--accent-red)">Error executing anomaly inference.</div>';
+  }
+}
+
+async function scanBatchAnomalies(){
+  const resultBox = document.getElementById('anomaly-test-result');
+  resultBox.style.display = 'block';
+  resultBox.innerHTML = '<div style="color:var(--text-muted)">Fetching all system payments to run batch scan...</div>';
+  try {
+    const payRes = await afetch('/api/admin/payments');
+    const payments = await payRes.json();
+    const amounts = payments.map(p => p.amount || 0);
+
+    if(!amounts.length){
+      resultBox.innerHTML = '<div>No recorded payments in database to scan.</div>';
+      return;
+    }
+
+    const r = await fetch(`${API}/api/ml/anomaly-detect/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(amounts)
+    });
+    const d = await r.json();
+
+    resultBox.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+        <div>
+          <strong style="color:var(--accent-green)">Batch Isolation Forest Scan Completed</strong>
+          <div style="font-size:0.8rem;color:var(--text-muted)">Checked ${d.total_checked} recorded transactions in database</div>
+        </div>
+        <span class="badge ${d.anomalies_found > 0 ? 'badge-red' : 'badge-green'}">${d.anomalies_found} Anomalies Found</span>
+      </div>
+      <div style="font-size:0.85rem;color:var(--text-secondary)">
+        ${d.anomalies_found === 0 ? '✅ All existing campus payments conform to regular rental spending behaviors.' : `⚠️ Identified ${d.anomalies_found} suspicious transaction(s) requiring manual audit review.`}
+      </div>
+    `;
+  } catch(e) {
+    resultBox.innerHTML = '<div style="color:var(--accent-red)">Batch scan failed.</div>';
+  }
+}
+
+function toast(msg){
+  let t=document.getElementById('toast');
+  if(!t){t=document.createElement('div');t.id='toast';t.style.cssText='position:fixed;bottom:2rem;right:2rem;background:var(--bg-elevated);border:1px solid var(--glass-border);color:var(--text-primary);padding:.9rem 1.5rem;border-radius:12px;font-size:.9rem;z-index:9999;box-shadow:var(--shadow-md);transition:opacity .3s;';document.body.appendChild(t);}
+  t.textContent=msg;t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity='0',3000);
+}
+
+loadAll();
+
+
+</script>
+</body>
+</html>

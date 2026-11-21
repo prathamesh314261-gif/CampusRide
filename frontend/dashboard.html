@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Renter Dashboard — CampusRide</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    .vehicle-card{background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:14px;padding:1.25rem;margin-bottom:.75rem;display:flex;align-items:center;gap:1rem;transition:var(--transition);cursor:pointer;}
+    .vehicle-card:hover{border-color:var(--accent-cyan);transform:translateY(-2px);}
+    .vehicle-emoji{font-size:2rem;min-width:48px;text-align:center;}
+    .vehicle-info{flex:1;}
+    .vehicle-name{font-weight:700;font-size:1rem;margin-bottom:.2rem;}
+    .vehicle-meta{color:var(--text-secondary);font-size:.8rem;}
+    .tbl{width:100%;border-collapse:collapse;}
+    .tbl th{text-align:left;padding:.7rem 1rem;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--glass-border);}
+    .tbl td{padding:.85rem 1rem;border-bottom:1px solid var(--border-subtle);font-size:.875rem;}
+    .tbl tr:last-child td{border-bottom:none;}
+    .empty-state{text-align:center;padding:3rem 2rem;color:var(--text-muted);}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;}
+    .modal-overlay.open{display:flex;}
+    .modal-box{background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:20px;padding:2rem;width:90%;max-width:500px;max-height:90vh;overflow-y:auto;}
+    .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:600;}
+    .badge-green{background:rgba(0,229,160,.15);color:#00e5a0;}
+    .badge-blue{background:rgba(108,99,255,.2);color:#a89cff;}
+    .badge-red{background:rgba(255,79,94,.15);color:#ff6b77;}
+    .badge-gold{background:rgba(255,209,102,.15);color:#ffd166;}
+    .badge-cyan{background:rgba(0,212,255,.15);color:#00d4ff;}
+    .filter-bar{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center;}
+    .filter-bar input,.filter-bar select{padding:.45rem .85rem;border-radius:8px;border:1px solid var(--glass-border);background:var(--bg-elevated);color:var(--text-primary);font-size:.85rem;min-width:130px;}
+    .msg-box{display:none;padding:.75rem 1rem;border-radius:10px;margin-bottom:1rem;font-size:.85rem;}
+    .msg-error{background:rgba(255,79,94,.15);color:#ff6b77;border:1px solid rgba(255,79,94,.3);}
+    .msg-success{background:rgba(0,229,160,.15);color:#00e5a0;border:1px solid rgba(0,229,160,.3);}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;}
+  </style>
+</head>
+<body>
+<div class="dashboard-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">🏍️ CampusRide</div>
+    <span class="sidebar-section-label">RENTER</span>
+    <a href="#" class="sidebar-item active" onclick="show('overview',this)"><span class="icon">📊</span> Dashboard</a>
+    <a href="#" class="sidebar-item" onclick="show('browse',this)"><span class="icon">🔍</span> Browse Vehicles</a>
+    <a href="#" class="sidebar-item" onclick="show('rentals',this)"><span class="icon">📋</span> My Rentals</a>
+    <a href="#" class="sidebar-item" onclick="show('payments',this)"><span class="icon">💳</span> Payments</a>
+    <a href="#" class="sidebar-item" onclick="show('reviews',this)"><span class="icon">⭐</span> My Reviews</a>
+    <span class="sidebar-section-label">ACCOUNT</span>
+    <a href="profile.html" class="sidebar-item"><span class="icon">👤</span> Profile</a>
+    <a href="login.html" class="sidebar-item" onclick="sessionStorage.clear()"><span class="icon">🚪</span> Logout</a>
+  </aside>
+
+  <!-- Main -->
+  <main class="dashboard-main">
+    <div class="dashboard-header">
+      <div>
+        <div class="dashboard-greeting" id="greeting">Good morning 👋</div>
+        <div class="dashboard-username">Renter Dashboard · <span id="user-name">Student</span></div>
+      </div>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn btn-ghost btn-sm" onclick="refreshDashboard()" title="Refresh All Dashboard Data">🔄 Refresh</button>
+        <button class="btn btn-primary" onclick="show('browse',null)">+ New Rental</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-value" id="stat-total">—</div><div class="stat-label">Total Rentals</div></div>
+      <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value" id="stat-spent">—</div><div class="stat-label">Total Spent</div></div>
+      <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value" id="stat-completed">—</div><div class="stat-label">Completed</div></div>
+      <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-value" id="stat-active">—</div><div class="stat-label">Active</div></div>
+    </div>
+
+    <!-- Overview -->
+    <div id="section-overview">
+      <!-- AI Recommendations -->
+      <div class="card" style="margin-bottom:1.5rem;border:1px solid rgba(108,99,255,0.3);background:linear-gradient(135deg, rgba(108,99,255,0.08) 0%, rgba(0,229,160,0.05) 100%);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem">
+          <div>
+            <h3 style="font-size:1.05rem;font-weight:700;display:flex;align-items:center;gap:0.4rem">
+              <span>✨ AI Smart Recommendations</span>
+              <span style="font-size:0.75rem;background:var(--grad-primary);color:#fff;padding:2px 8px;border-radius:12px;font-weight:600">Personalized</span>
+            </h3>
+            <p style="color:var(--text-muted);font-size:0.82rem;margin-top:2px">Matched by student preferences, budget, owner trust ratings, and live campus availability.</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="refreshRecommendationsUI()">🔄 Refresh AI</button>
+        </div>
+        <div id="ai-recs-container" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1rem">Loading AI recommendations...</div>
+      </div>
+
+      <div class="card" style="margin-bottom:1.5rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
+          <h3 style="font-size:1rem;font-weight:700">🚗 Available Vehicles</h3>
+          <div style="display:flex;gap:0.5rem">
+            <button class="btn btn-ghost btn-sm" onclick="refreshBrowse()">🔄 Refresh</button>
+            <button class="btn btn-ghost btn-sm" onclick="show('browse',null)">View All →</button>
+          </div>
+        </div>
+        <div id="ov-vehicles">Loading...</div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
+          <h3 style="font-size:1rem;font-weight:700;margin:0">📋 Recent Rentals</h3>
+          <button class="btn btn-ghost btn-sm" onclick="refreshRentals()">🔄 Refresh</button>
+        </div>
+        <div id="ov-rentals">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Browse -->
+    <div id="section-browse" style="display:none">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <h2 style="font-size:1.2rem;font-weight:700;margin:0">🔍 Browse Vehicles</h2>
+          <button class="btn btn-ghost btn-sm" onclick="refreshBrowse()">🔄 Refresh Fleet</button>
+        </div>
+        <div class="filter-bar">
+          <input type="text" id="f-search" placeholder="🔍 Search brand, model..." oninput="applyFilters()">
+          <select id="f-type" onchange="applyFilters()">
+            <option value="">All Types</option>
+            <option value="Scooter">🛵 Scooter</option>
+            <option value="Bike">🏍️ Bike</option>
+            <option value="Car">🚗 Car</option>
+            <option value="Bicycle">🚲 Bicycle</option>
+          </select>
+          <input type="number" id="f-min" placeholder="Min ₹/hr" oninput="applyFilters()" min="0" style="max-width:110px">
+          <input type="number" id="f-max" placeholder="Max ₹/hr" oninput="applyFilters()" min="0" style="max-width:110px">
+          <input type="text" id="f-loc" placeholder="📍 Location" oninput="applyFilters()" style="max-width:140px">
+          <button onclick="clearFilters()" class="btn btn-ghost btn-sm">Clear</button>
+        </div>
+        <div id="browse-vehicles">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Rentals -->
+    <div id="section-rentals" style="display:none">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+          <h2 style="font-size:1.2rem;font-weight:700;margin:0">📋 My Rental History</h2>
+          <button class="btn btn-ghost btn-sm" onclick="refreshRentals()">🔄 Refresh</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr><th>Vehicle</th><th>Dates</th><th>Hours</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="rent-table"><tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payments -->
+    <div id="section-payments" style="display:none">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+          <h2 style="font-size:1.2rem;font-weight:700;margin:0">💳 Payment History</h2>
+          <button class="btn btn-ghost btn-sm" onclick="refreshPayments()">🔄 Refresh</button>
+        </div>
+        <div id="pay-list">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Reviews -->
+    <div id="section-reviews" style="display:none">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+          <h2 style="font-size:1.2rem;font-weight:700;margin:0">⭐ My Reviews</h2>
+          <button class="btn btn-ghost btn-sm" onclick="refreshReviews()">🔄 Refresh</button>
+        </div>
+        <div id="review-list">Loading...</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Book Modal -->
+<div class="modal-overlay" id="book-modal" onclick="if(event.target===this)closeBM()">
+  <div class="modal-box">
+    <div style="display:flex;gap:1rem;align-items:center;margin-bottom:1.5rem">
+      <div id="bm-emoji" style="font-size:2.5rem">🚗</div>
+      <div>
+        <div id="bm-title" style="font-weight:700;font-size:1.1rem"></div>
+        <div id="bm-meta" style="color:var(--text-secondary);font-size:.85rem"></div>
+        <div id="bm-rating" style="font-size:.8rem;margin-top:.2rem"></div>
+      </div>
+    </div>
+    <div id="bm-msg" class="msg-box"></div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label">Start Date & Time *</label>
+        <input type="datetime-local" id="b-start" class="form-control" required onchange="calcCost()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">End Date & Time *</label>
+        <input type="datetime-local" id="b-end" class="form-control" required onchange="calcCost()">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Pickup Location *</label>
+      <input type="text" id="b-loc" class="form-control" placeholder="e.g. Hostel A Gate" required>
+    </div>
+    <div id="cost-box" style="display:none;background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.25);border-radius:10px;padding:.85rem 1rem;margin-bottom:1rem;font-size:.9rem">
+      💰 Estimated Cost: <strong id="cost-val"></strong>
+    </div>
+    <div style="display:flex;gap:.75rem">
+      <button id="bm-btn" onclick="submitBook()" class="btn btn-primary" style="flex:1">Confirm Booking</button>
+      <button onclick="closeBM()" class="btn btn-ghost">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Review Modal -->
+<div class="modal-overlay" id="review-modal" onclick="if(event.target===this)closeRM()">
+  <div class="modal-box">
+    <div class="modal-title">⭐ Write a Review</div>
+    <div id="rm-msg" class="msg-box"></div>
+    <input type="hidden" id="rm-rental">
+    <div class="form-group">
+      <label class="form-label">Rating</label>
+      <div id="star-picker" style="display:flex;gap:.5rem;font-size:1.8rem;cursor:pointer">
+        <span onclick="setRating(1)" class="star-btn">☆</span>
+        <span onclick="setRating(2)" class="star-btn">☆</span>
+        <span onclick="setRating(3)" class="star-btn">☆</span>
+        <span onclick="setRating(4)" class="star-btn">☆</span>
+        <span onclick="setRating(5)" class="star-btn">☆</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Comment</label>
+      <textarea id="rm-comment" class="form-control" rows="3" placeholder="Tell others about your experience..."></textarea>
+    </div>
+    <div style="display:flex;gap:.75rem">
+      <button onclick="submitReview()" class="btn btn-primary" style="flex:1">Submit Review</button>
+      <button onclick="closeRM()" class="btn btn-ghost">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Receipt Modal -->
+<div class="modal-overlay" id="receipt-modal" onclick="if(event.target===this)closeReceipt()">
+  <div class="modal-box" id="receipt-box" style="font-family:monospace">
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:2rem">🧾</div>
+      <div style="font-weight:700;font-size:1.2rem">Payment Receipt</div>
+      <div style="color:var(--text-muted);font-size:.8rem">CampusRide</div>
+    </div>
+    <div id="receipt-content"></div>
+    <button onclick="closeReceipt()" class="btn btn-primary w-100" style="margin-top:1.5rem">Close</button>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:15501';
+const token=sessionStorage.getItem('token');
+const loginAs=sessionStorage.getItem('login_as');
+if(!token||loginAs==='owner'){window.location.href='login.html';}
+
+const hr=new Date().getHours();
+document.getElementById('greeting').textContent=hr<12?'Good morning 👋':hr<17?'Good afternoon 👋':'Good evening 👋';
+document.getElementById('user-name').textContent=sessionStorage.getItem('user_name')||'Student';
+
+const EMOJIS={Scooter:'🛵',Bike:'🏍️',Car:'🚗',Bicycle:'🚲'};
+const BC={Confirmed:'badge-blue',Active:'badge-green',Completed:'badge-cyan',Cancelled:'badge-red'};
+const PC={Pending:'badge-gold',Completed:'badge-green',Failed:'badge-red',Refunded:'badge-cyan'};
+
+let allVehicles=[],myRentals=[],myPayments=[],selectedVehicle=null,selectedRating=0;
+
+function show(name,el){
+  document.querySelectorAll('[id^="section-"]').forEach(s=>s.style.display='none');
+  document.getElementById('section-'+name).style.display='block';
+  document.querySelectorAll('.sidebar-item').forEach(i=>i.classList.remove('active'));
+  if(el)el.classList.add('active');
+  if(name==='rentals')renderRentTable();
+  if(name==='payments')renderPayments();
+  if(name==='reviews')loadMyReviews();
+  if(name==='browse')renderBrowse(allVehicles);
+}
+
+async function loadAll(){
+  try{const r=await fetch(`${API}/api/vehicles`,{headers:{Authorization:`Bearer ${token}`}});allVehicles=await r.json();if(!Array.isArray(allVehicles))allVehicles=[];}catch{allVehicles=[];}
+  try{const r=await fetch(`${API}/api/rentals`,{headers:{Authorization:`Bearer ${token}`}});myRentals=await r.json();if(!Array.isArray(myRentals))myRentals=[];}catch{myRentals=[];}
+  try{const r=await fetch(`${API}/api/payments/my`,{headers:{Authorization:`Bearer ${token}`}});myPayments=await r.json();if(!Array.isArray(myPayments))myPayments=[];}catch{myPayments=[];}
+  updateStats();
+  renderOverview();
+  loadRecommendations();
+}
+
+async function loadRecommendations(){
+  const container = document.getElementById('ai-recs-container');
+  if(!container) return;
+  const studentId = sessionStorage.getItem('student_id') || 1;
+  try {
+    const r = await fetch(`${API}/api/ml/recommendations/${studentId}`);
+    const data = await r.json();
+    const recs = data.recommendations || [];
+    if(!recs.length){
+      container.innerHTML = '<p class="text-muted" style="font-size:0.85rem">No personalized recommendations right now.</p>';
+      return;
+    }
+    container.innerHTML = recs.map(rec => {
+      const em = EMOJIS[rec.vehicle_type] || '🚗';
+      const score = Math.round(rec.recommendation_score || 85);
+      const matchBadge = score >= 88 ? '✨ 90%+ Top Match' : score >= 80 ? '⭐ High Match' : '👍 Good Match';
+      return `
+        <div style="background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:12px;padding:1rem;position:relative;display:flex;flex-direction:column;justify-content:space-between">
+          <div style="position:absolute;top:10px;right:10px">
+            <span style="font-size:0.72rem;background:rgba(108,99,255,0.2);color:var(--accent-cyan);padding:2px 7px;border-radius:10px;font-weight:700">${matchBadge} (${score}%)</span>
+          </div>
+          <div>
+            <div style="font-size:1.8rem;margin-bottom:0.4rem">${em}</div>
+            <div style="font-weight:700;font-size:0.95rem">${rec.brand} ${rec.model}</div>
+            <div style="color:var(--text-muted);font-size:0.78rem;margin-top:2px">${rec.vehicle_type} · Optimal for Campus</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--glass-border)">
+            <div style="font-weight:700;color:var(--accent-green);font-size:0.95rem">₹${rec.hourly_rate}/hr</div>
+            <button class="btn btn-primary btn-sm" onclick="openBook(${rec.vehicle_id})" style="font-size:0.75rem;padding:3px 10px">Book AI Pick</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch(e) {
+    container.innerHTML = '<p class="text-muted" style="font-size:0.85rem">AI engine loading...</p>';
+  }
+}
+
+
+function updateStats(){
+  const completed=myRentals.filter(r=>r.status==='Completed');
+  const active=myRentals.filter(r=>r.status==='Active'||r.status==='Confirmed');
+  const spent=completed.reduce((s,r)=>s+(r.final_amount||0),0);
+  document.getElementById('stat-total').textContent=myRentals.length;
+  document.getElementById('stat-spent').textContent='₹'+spent.toFixed(0);
+  document.getElementById('stat-completed').textContent=completed.length;
+  document.getElementById('stat-active').textContent=active.length;
+}
+
+function vCard(v){
+  const em=EMOJIS[v.vehicle_type]||'🚗';
+  const avail=v.availability_status==='Available';
+  const stars=v.avg_rating>0?'⭐'.repeat(Math.round(v.avg_rating))+` (${v.total_reviews})`:'No reviews yet';
+  return `<div class="vehicle-card" onclick="avail?openBook(${v.vehicle_id}):null">
+    <div class="vehicle-emoji">${em}</div>
+    <div class="vehicle-info">
+      <div class="vehicle-name">${v.brand} ${v.model}</div>
+      <div class="vehicle-meta">${v.vehicle_type} · ${v.fuel_type} · 💺${v.seating_capacity} · 📍${v.location||'Campus'}</div>
+      <div style="font-size:.78rem;color:var(--text-muted);margin-top:.2rem">${stars}</div>
+    </div>
+    <div style="text-align:right;min-width:95px">
+      <div style="font-weight:700;color:var(--accent-green);font-size:1rem">₹${v.hourly_rate}/hr</div>
+      ${avail
+        ?`<button class="btn btn-primary btn-sm" style="margin-top:.4rem" onclick="event.stopPropagation();openBook(${v.vehicle_id})">Book Now</button>`
+        :`<span class="badge badge-gold" style="margin-top:.4rem;display:inline-flex">${v.availability_status}</span>`}
+    </div>
+  </div>`;
+}
+
+function renderOverview(){
+  const el=document.getElementById('ov-vehicles');
+  const avail=allVehicles.filter(v=>v.availability_status==='Available').slice(0,4);
+  el.innerHTML=avail.length?avail.map(vCard).join(''):'<p class="text-muted">No vehicles available now</p>';
+
+  const rel=document.getElementById('ov-rentals');
+  if(myRentals.length===0){rel.innerHTML=`<p class="text-muted">No rentals yet. <a href="#" onclick="show('browse',null)" style="color:var(--accent-cyan)">Browse vehicles →</a></p>`;return;}
+  rel.innerHTML=`<table class="tbl"><thead><tr><th>Vehicle</th><th>Hours</th><th>Amount</th><th>Status</th></tr></thead><tbody>
+    ${myRentals.slice(0,5).map(b=>`<tr>
+      <td><strong>${b.vehicle_name}</strong></td>
+      <td>${(b.total_hours||0).toFixed(1)}h</td>
+      <td><strong>₹${(b.final_amount||0).toFixed(0)}</strong></td>
+      <td><span class="badge ${BC[b.status]||'badge-cyan'}">${b.status}</span></td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+function applyFilters(){
+  const search=document.getElementById('f-search').value.toLowerCase();
+  const type=document.getElementById('f-type').value;
+  const minP=parseFloat(document.getElementById('f-min').value)||0;
+  const maxP=parseFloat(document.getElementById('f-max').value)||999999;
+  const loc=document.getElementById('f-loc').value.toLowerCase();
+  const filtered=allVehicles.filter(v=>
+    (!search||(v.brand+' '+v.model).toLowerCase().includes(search)||v.vehicle_type.toLowerCase().includes(search))&&
+    (!type||v.vehicle_type===type)&&
+    v.hourly_rate>=minP&&v.hourly_rate<=maxP&&
+    (!loc||(v.location||'').toLowerCase().includes(loc))
+  );
+  renderBrowse(filtered);
+}
+
+function clearFilters(){
+  ['f-search','f-min','f-max','f-loc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-type').value='';
+  renderBrowse(allVehicles);
+}
+
+function renderBrowse(list){
+  const el=document.getElementById('browse-vehicles');
+  if(!el)return;
+  if(list.length===0){el.innerHTML='<div class="empty-state">🔍<br>No vehicles match your filters</div>';return;}
+  el.innerHTML=list.map(vCard).join('');
+}
+
+function renderRentTable(){
+  const el=document.getElementById('rent-table');if(!el)return;
+  if(myRentals.length===0){el.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem">No rentals yet. <a href="#" onclick="show(\'browse\',null)" style="color:var(--accent-cyan)">Browse vehicles</a></td></tr>';return;}
+  el.innerHTML=myRentals.map(b=>{
+    const hasPaid = myPayments.some(p => p.rental_id === b.rental_id);
+    const actions=[];
+    if(!hasPaid && b.status !== 'Cancelled') {
+      actions.push(`<button onclick="payRental(${b.rental_id})" class="btn btn-outline btn-sm" style="border:1px solid var(--accent-green);color:var(--accent-green)">💳 Pay</button>`);
+    }
+    if(b.status==='Confirmed')actions.push(`<button onclick="startRental(${b.rental_id})" class="btn btn-primary btn-sm">▶ Start</button><button onclick="cancelRental(${b.rental_id})" class="btn btn-ghost btn-sm" style="color:var(--accent-red)">✕ Cancel</button>`);
+    if(b.status==='Active')actions.push(`<button onclick="endRental(${b.rental_id})" class="btn btn-primary btn-sm">⏹ End</button>`);
+    if(b.status==='Completed')actions.push(`<button onclick="openReview(${b.rental_id})" class="btn btn-ghost btn-sm">⭐ Review</button><button onclick="showReceipt(${b.rental_id})" class="btn btn-ghost btn-sm">🧾</button>`);
+    return `<tr>
+      <td><strong>${b.vehicle_name}</strong><br><small style="color:var(--text-muted)">${b.vehicle_type}</small></td>
+      <td>${new Date(b.start_time).toLocaleDateString()}<br><small style="color:var(--text-muted)">${new Date(b.end_time).toLocaleDateString()}</small></td>
+      <td>${(b.total_hours||0).toFixed(1)}h</td>
+      <td>
+        <span class="badge ${BC[b.status]||'badge-cyan'}">${b.status}</span>
+        ${hasPaid?`<span class="badge badge-green" style="margin-left:4px;font-size:0.7rem">Paid</span>`:`<span class="badge badge-gold" style="margin-left:4px;font-size:0.7rem">Unpaid</span>`}
+        ${b.status==='Confirmed'&&b.pickup_code&&b.pickup_code!=='N/A'?`<div style="margin-top:4px"><span style="font-size:0.75rem;background:rgba(0,229,160,0.15);color:var(--accent-green);padding:2px 6px;border-radius:4px;font-weight:700;letter-spacing:1px">🔑 OTP: ${b.pickup_code}</span></div>`:''}
+      </td>
+      <td style="white-space:nowrap">${actions.join(' ')}</td>
+    </tr>`;
+  }).join('');
+
+}
+
+function renderPayments(){
+  const el=document.getElementById('pay-list');if(!el)return;
+  if(myPayments.length===0){el.innerHTML='<p class="text-muted">No payments yet.</p>';return;}
+  const total=myPayments.filter(p=>p.payment_status==='Completed').reduce((s,p)=>s+(p.amount||0),0);
+  el.innerHTML=`<div style="margin-bottom:1.5rem;padding:1rem;background:var(--bg-surface);border-radius:12px;display:flex;justify-content:space-between;align-items:center">
+    <div><div style="color:var(--text-muted);font-size:.85rem">Total Spent</div><div style="font-size:2rem;font-weight:700;color:var(--accent-green)">₹${total.toFixed(0)}</div></div>
+    <div style="text-align:right"><div style="color:var(--text-muted);font-size:.85rem">${myPayments.length} transactions</div></div>
+  </div>
+  <table class="tbl"><thead><tr><th>Vehicle</th><th>Method</th><th>Date</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody>
+    ${myPayments.map(p=>`<tr>
+      <td><strong>${p.vehicle_name||'Vehicle'}</strong></td>
+      <td>${p.payment_method}</td>
+      <td>${new Date(p.payment_date).toLocaleDateString()}</td>
+      <td><strong>₹${(p.amount||0).toFixed(0)}</strong></td>
+      <td><span class="badge ${PC[p.payment_status]||'badge-cyan'}">${p.payment_status}</span></td>
+      <td><button onclick="showReceipt2(${p.payment_id})" class="btn btn-ghost btn-sm">🧾</button></td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+async function loadMyReviews(){
+  const el=document.getElementById('review-list');if(!el)return;
+  try{
+    const r=await fetch(`${API}/api/reviews/my`,{headers:{Authorization:`Bearer ${token}`}});
+    const data=await r.json();
+    if(!data.length){el.innerHTML='<div class="empty-state">⭐<br>No reviews written yet.<br><small>Complete a rental to write a review</small></div>';return;}
+    el.innerHTML=`<table class="tbl"><thead><tr><th>Vehicle</th><th>Rating</th><th>Comment</th><th>Date</th></tr></thead><tbody>
+      ${data.map(rv=>`<tr>
+        <td><strong>${rv.vehicle_name}</strong></td>
+        <td>${'⭐'.repeat(rv.rating)}</td>
+        <td style="max-width:250px;white-space:normal">${rv.comment||'<i style="color:var(--text-muted)">No comment</i>'}</td>
+        <td style="color:var(--text-muted);font-size:.8rem">${new Date(rv.created_at).toLocaleDateString()}</td>
+      </tr>`).join('')}
+    </tbody></table>`;
+  }catch{el.innerHTML='<p class="text-muted">Could not load reviews</p>';}
+}
+
+// ── Book Vehicle ──
+function openBook(vid){
+  selectedVehicle=allVehicles.find(v=>v.vehicle_id===vid);
+  if(!selectedVehicle)return;
+  const em=EMOJIS[selectedVehicle.vehicle_type]||'🚗';
+  document.getElementById('bm-emoji').textContent=em;
+  document.getElementById('bm-title').textContent=`${selectedVehicle.brand} ${selectedVehicle.model}`;
+  document.getElementById('bm-meta').textContent=`${selectedVehicle.vehicle_type} · ₹${selectedVehicle.hourly_rate}/hr · 💺${selectedVehicle.seating_capacity} · 📍${selectedVehicle.location||'Campus'}`;
+  document.getElementById('bm-rating').textContent=selectedVehicle.avg_rating>0?`${'⭐'.repeat(Math.round(selectedVehicle.avg_rating))} ${selectedVehicle.avg_rating.toFixed(1)} (${selectedVehicle.total_reviews} reviews)`:'';
+  const now=new Date();
+  const s=new Date(now.getTime()+60*60*1000);
+  const e=new Date(now.getTime()+3*60*60*1000);
+  document.getElementById('b-start').value=toLocal(s);
+  document.getElementById('b-end').value=toLocal(e);
+  document.getElementById('b-loc').value=selectedVehicle.location||'';
+  showMsg2('bm-msg','','');
+  calcCost();
+  document.getElementById('book-modal').classList.add('open');
+}
+function closeBM(){document.getElementById('book-modal').classList.remove('open');selectedVehicle=null;}
+
+function toLocal(d){const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;}
+
+function calcCost(){
+  if(!selectedVehicle)return;
+  const s=document.getElementById('b-start').value;
+  const e=document.getElementById('b-end').value;
+  if(s&&e){const hrs=(new Date(e)-new Date(s))/3600000;if(hrs>0){document.getElementById('cost-val').textContent=`₹${(hrs*selectedVehicle.hourly_rate).toFixed(0)} (${hrs.toFixed(1)}h)`;document.getElementById('cost-box').style.display='block';}}
+}
+
+async function submitBook(){
+  if(!selectedVehicle)return;
+  const btn=document.getElementById('bm-btn');
+  btn.textContent='Booking…';btn.disabled=true;
+  const sv=document.getElementById('b-start').value;
+  const ev=document.getElementById('b-end').value;
+  const loc=document.getElementById('b-loc').value.trim();
+  const hrs=(new Date(ev)-new Date(sv))/3600000;
+  if(hrs<=0){showMsg2('bm-msg','End time must be after start time','error');btn.textContent='Confirm Booking';btn.disabled=false;return;}
+  if(!loc){showMsg2('bm-msg','Enter pickup location','error');btn.textContent='Confirm Booking';btn.disabled=false;return;}
+  const fd=new FormData();
+  fd.append('vehicle_id',selectedVehicle.vehicle_id);
+  fd.append('start_time',new Date(sv).toISOString().split('.')[0]);
+  fd.append('end_time',new Date(ev).toISOString().split('.')[0]);
+  fd.append('pickup_location',loc);
+  try{
+    const r=await fetch(`${API}/api/rentals`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:fd,signal:AbortSignal.timeout(8000)});
+    const d=await r.json();
+    if(r.ok){
+      closeBM();
+      toast('✅ Booking confirmed! ₹'+d.final_amount.toFixed(0));
+      // Auto-record payment for confirmed booking
+      try {
+        const pfd = new FormData();
+        pfd.append('rental_id', d.rental_id);
+        pfd.append('payment_method', 'UPI');
+        await fetch(`${API}/api/payments`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:pfd});
+      } catch(e){}
+      await loadAll();
+      show('rentals',null);
+    }
+    else{showMsg2('bm-msg',d.detail||'Booking failed','error');btn.textContent='Confirm Booking';btn.disabled=false;}
+  }catch{showMsg2('bm-msg','Server not reachable','error');btn.textContent='Confirm Booking';btn.disabled=false;}
+}
+
+// ── Rental Actions ──
+async function payRental(id){
+  const fd = new FormData();
+  fd.append('rental_id', id);
+  fd.append('payment_method', 'UPI');
+  try{
+    const r = await fetch(`${API}/api/payments`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:fd});
+    const d = await r.json();
+    if(r.ok){
+      toast('💳 Payment of ₹'+(d.amount||0).toFixed(0)+' successful!');
+      await loadAll();
+      renderRentTable();
+      renderPayments();
+    } else {
+      toast(d.detail || 'Payment failed');
+    }
+  }catch{
+    toast('Server error processing payment');
+  }
+}
+
+async function startRental(id){
+  const r=await fetch(`${API}/api/rentals/${id}/start`,{method:'PUT',headers:{Authorization:`Bearer ${token}`}});
+  const d=await r.json();
+  if(r.ok){toast('▶ Rental started!');await loadAll();renderRentTable();}
+  else toast(d.detail||'Failed');
+}
+async function endRental(id){
+  if(!confirm('End rental and return vehicle?'))return;
+  const r=await fetch(`${API}/api/rentals/${id}/end`,{method:'PUT',headers:{Authorization:`Bearer ${token}`}});
+  const d=await r.json();
+  if(r.ok){
+    // Auto-record payment if not already paid
+    const alreadyPaid = myPayments.some(p => p.rental_id === id);
+    if(!alreadyPaid){
+      try{
+        const pfd = new FormData();
+        pfd.append('rental_id', id);
+        pfd.append('payment_method', 'UPI');
+        await fetch(`${API}/api/payments`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:pfd});
+      }catch(e){}
+    }
+    toast('⏹ Rental completed & payment recorded!');
+    await loadAll();
+    renderRentTable();
+  }
+  else toast(d.detail||'Failed');
+}
+async function cancelRental(id){
+  if(!confirm('Cancel this booking?'))return;
+  const fd=new FormData();fd.append('reason','Cancelled by renter');
+  const r=await fetch(`${API}/api/rentals/${id}/cancel`,{method:'PUT',headers:{Authorization:`Bearer ${token}`},body:fd});
+  const d=await r.json();
+  if(r.ok){toast('✅ Booking cancelled');await loadAll();renderRentTable();}
+  else toast(d.detail||'Failed');
+}
+
+// ── Review ──
+let reviewRating=0;
+function openReview(rentalId){
+  document.getElementById('rm-rental').value=rentalId;
+  reviewRating=0;updateStars();showMsg2('rm-msg','','');
+  document.getElementById('rm-comment').value='';
+  document.getElementById('review-modal').classList.add('open');
+}
+function closeRM(){document.getElementById('review-modal').classList.remove('open');}
+function setRating(n){reviewRating=n;updateStars();}
+function updateStars(){document.querySelectorAll('.star-btn').forEach((s,i)=>s.textContent=i<reviewRating?'⭐':'☆');}
+async function submitReview(){
+  if(reviewRating < 1){
+    showMsg2('rm-msg','Please select a rating of at least 1 star','error');
+    return;
+  }
+  const fd=new FormData();
+  fd.append('rental_id',document.getElementById('rm-rental').value);
+  fd.append('rating',reviewRating);
+  fd.append('comment',document.getElementById('rm-comment').value);
+  const r=await fetch(`${API}/api/reviews`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:fd});
+  const d=await r.json();
+  if(r.ok){
+    closeRM();
+    toast('⭐ Review submitted!');
+    loadMyReviews();
+  }
+  else showMsg2('rm-msg',d.detail||'Failed','error');
+}
+
+// ── Receipt ──
+async function showReceipt(rentalId){
+  const pay=myPayments.find(p=>p.rental_id===rentalId);
+  if(pay)showReceipt2(pay.payment_id);
+  else toast('No payment record found');
+}
+async function showReceipt2(payId){
+  const r=await fetch(`${API}/api/payments/receipt/${payId}`,{headers:{Authorization:`Bearer ${token}`}});
+  if(!r.ok){toast('Receipt not found');return;}
+  const d=await r.json();
+  document.getElementById('receipt-content').innerHTML=`
+    <table style="width:100%;border-collapse:collapse;font-size:.9rem">
+      ${[['Receipt No',d.receipt_no],['Transaction ID',d.transaction_id],['Student',d.student_name],['Vehicle',d.vehicle_name],['Duration',`${d.rental_hours.toFixed(1)} hours`],['Subtotal','₹'+d.subtotal.toFixed(0)],['Discount','₹'+d.discount.toFixed(0)],['Amount Paid','₹'+d.amount_paid.toFixed(0)],['Method',d.payment_method],['Status',d.payment_status],['Date',new Date(d.payment_date).toLocaleString()]].map(([k,v])=>`<tr><td style="padding:.4rem 0;color:var(--text-muted)">${k}</td><td style="padding:.4rem 0;text-align:right;font-weight:600">${v}</td></tr>`).join('')}
+    </table>`;
+  document.getElementById('receipt-modal').classList.add('open');
+}
+function closeReceipt(){document.getElementById('receipt-modal').classList.remove('open');}
+
+// ── Utilities ──
+function showMsg2(id,msg,type){
+  const el=document.getElementById(id);if(!el)return;
+  el.textContent=msg;el.style.display=msg?'block':'none';
+  el.className='msg-box '+(type==='error'?'msg-error':'msg-success');
+}
+function toast(msg){
+  let t=document.getElementById('toast');
+  if(!t){
+    t=document.createElement('div');
+    t.id='toast';
+    t.style.cssText='position:fixed;bottom:2rem;right:2rem;background:var(--bg-elevated);border:1px solid var(--glass-border);color:var(--text-primary);padding:.9rem 1.5rem;border-radius:12px;font-size:.9rem;z-index:9999;box-shadow:var(--shadow-md);transition:opacity .3s;';
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;
+  t.style.opacity='1';
+  clearTimeout(t._t);
+  t._t=setTimeout(()=>t.style.opacity='0',3000);
+}
+// ── Refresh Handlers ──
+async function refreshDashboard(){
+  toast('🔄 Refreshing dashboard...');
+  await loadAll();
+  toast('✅ Dashboard updated!');
+}
+
+async function refreshRentals(){
+  toast('🔄 Refreshing rentals...');
+  try{
+    const r=await fetch(`${API}/api/rentals`,{headers:{Authorization:`Bearer ${token}`}});
+    myRentals=await r.json();
+    if(!Array.isArray(myRentals))myRentals=[];
+  }catch{myRentals=[];}
+  renderRentTable();
+  updateStats();
+  toast('✅ Rentals updated!');
+}
+
+async function refreshPayments(){
+  toast('🔄 Refreshing payments...');
+  try{
+    const r=await fetch(`${API}/api/payments/my`,{headers:{Authorization:`Bearer ${token}`}});
+    myPayments=await r.json();
+    if(!Array.isArray(myPayments))myPayments=[];
+  }catch{myPayments=[];}
+  renderPayments();
+  toast('✅ Payments updated!');
+}
+
+async function refreshReviews(){
+  toast('🔄 Refreshing reviews...');
+  await loadMyReviews();
+  toast('✅ Reviews updated!');
+}
+
+async function refreshBrowse(){
+  toast('🔄 Refreshing vehicle fleet...');
+  try{
+    const r=await fetch(`${API}/api/vehicles`,{headers:{Authorization:`Bearer ${token}`}});
+    allVehicles=await r.json();
+    if(!Array.isArray(allVehicles))allVehicles=[];
+  }catch{allVehicles=[];}
+  renderBrowse(allVehicles);
+  renderOverview();
+  toast('✅ Fleet updated!');
+}
+
+async function refreshRecommendationsUI(){
+  toast('🤖 Refreshing AI recommendations...');
+  await loadRecommendations();
+  toast('✨ AI recommendations updated!');
+}
+
+loadAll();
+</script>
+</body>
+</html>

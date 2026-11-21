@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusRide — Campus Vehicle Rental</title>
+  <meta name="description" content="Rent scooters, bikes, and cars on campus. Fast, affordable peer-to-peer campus vehicle rental with AI-powered recommendations.">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="index.html" class="navbar-brand">
+        <span class="brand-icon">🏍️</span> CampusRide
+      </a>
+      <ul class="navbar-nav">
+        <li><a href="#vehicles" id="nav-vehicles">Vehicles</a></li>
+        <li><a href="#features" id="nav-features">Features</a></li>
+        <li><a href="login.html" id="nav-login" class="btn btn-outline btn-sm">Login</a></li>
+        <li><a href="register.html" id="nav-register" class="btn btn-primary btn-sm">Get Started</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-orb hero-orb-1"></div>
+    <div class="hero-orb hero-orb-2"></div>
+    <div class="container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center;">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="ai-pulse"></span> AI-Powered Recommendations
+        </div>
+        <h1 class="hero-title">
+          Ride Around<br>
+          <span class="gradient-text">Campus Smarter</span>
+        </h1>
+        <p class="hero-subtitle">
+          Rent scooters, bikes, and cars from fellow students. Affordable, instant, and AI-recommended for your needs.
+        </p>
+        <div class="hero-actions">
+          <a href="vehicles.html" id="hero-explore-btn" class="btn btn-primary btn-lg">🚀 Explore Vehicles</a>
+          <a href="register.html" id="hero-signup-btn" class="btn btn-ghost btn-lg">Create Account →</a>
+        </div>
+        <div class="hero-stats">
+          <div>
+            <div class="hero-stat-value">500+</div>
+            <div class="hero-stat-label">VEHICLES</div>
+          </div>
+          <div>
+            <div class="hero-stat-value">2,400+</div>
+            <div class="hero-stat-label">STUDENTS</div>
+          </div>
+          <div>
+            <div class="hero-stat-value">₹40/hr</div>
+            <div class="hero-stat-label">STARTING FROM</div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="hero-emoji-circle">🛵</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="py-5">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-eyebrow">Why CampusRide</span>
+        <h2 class="section-title">Everything You Need on Campus</h2>
+        <p class="section-subtitle">From AI recommendations to instant booking — campus mobility, reimagined.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card fade-in">
+          <span class="feature-icon">🤖</span>
+          <h3 class="feature-title">AI Recommendations</h3>
+          <p class="feature-text">Our machine learning engine analyzes your rental history to suggest the best vehicles for you.</p>
+        </div>
+        <div class="feature-card fade-in">
+          <span class="feature-icon">⚡</span>
+          <h3 class="feature-title">Instant Booking</h3>
+          <p class="feature-text">Book a vehicle in under a minute. Pick it up at the nearest campus hotspot.</p>
+        </div>
+        <div class="feature-card fade-in">
+          <span class="feature-icon">🔒</span>
+          <h3 class="feature-title">Secure Payments</h3>
+          <p class="feature-text">Pay via UPI, card, or cash. Anomaly detection flags suspicious transactions automatically.</p>
+        </div>
+        <div class="feature-card fade-in">
+          <span class="feature-icon">📊</span>
+          <h3 class="feature-title">Demand Insights</h3>
+          <p class="feature-text">See predicted demand for tomorrow so you know which vehicles will be available.</p>
+        </div>
+        <div class="feature-card fade-in">
+          <span class="feature-icon">🎟️</span>
+          <h3 class="feature-title">Coupon Discounts</h3>
+          <p class="feature-text">Apply promo codes like SAVE20 at checkout for instant discounts on your rental.</p>
+        </div>
+        <div class="feature-card fade-in">
+          <span class="feature-icon">🛡️</span>
+          <h3 class="feature-title">Insured Vehicles</h3>
+          <p class="feature-text">Every vehicle on the platform is registered, insured, and regularly maintained.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Popular Vehicles -->
+  <section id="vehicles" class="py-5" style="background: rgba(255,255,255,0.02);">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-eyebrow">Available Now</span>
+        <h2 class="section-title">Popular Vehicles</h2>
+        <p class="section-subtitle">Browse what's ready to ride right now on your campus.</p>
+      </div>
+      <div class="vehicle-grid" id="vehicle-grid">
+        <!-- Shimmer placeholders -->
+        <div class="vehicle-card" style="min-height:320px;">
+          <div class="shimmer" style="height:180px;border-radius:0;"></div>
+          <div style="padding:1.25rem;">
+            <div class="shimmer" style="height:18px;width:70%;margin-bottom:10px;"></div>
+            <div class="shimmer" style="height:14px;width:40%;margin-bottom:20px;"></div>
+            <div class="shimmer" style="height:36px;width:100%;"></div>
+          </div>
+        </div>
+        <div class="vehicle-card" style="min-height:320px;">
+          <div class="shimmer" style="height:180px;border-radius:0;"></div>
+          <div style="padding:1.25rem;">
+            <div class="shimmer" style="height:18px;width:70%;margin-bottom:10px;"></div>
+            <div class="shimmer" style="height:14px;width:40%;margin-bottom:20px;"></div>
+            <div class="shimmer" style="height:36px;width:100%;"></div>
+          </div>
+        </div>
+        <div class="vehicle-card" style="min-height:320px;">
+          <div class="shimmer" style="height:180px;border-radius:0;"></div>
+          <div style="padding:1.25rem;">
+            <div class="shimmer" style="height:18px;width:70%;margin-bottom:10px;"></div>
+            <div class="shimmer" style="height:14px;width:40%;margin-bottom:20px;"></div>
+            <div class="shimmer" style="height:36px;width:100%;"></div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:3rem;">
+        <a href="vehicles.html" id="view-all-btn" class="btn btn-outline btn-lg">View All Vehicles →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-5">
+    <div class="container" style="text-align:center;">
+      <div class="card card-gradient" style="max-width:600px;margin:0 auto;padding:3.5rem;">
+        <h2 style="font-size:2rem;font-weight:800;margin-bottom:0.75rem;">Ready to ride?</h2>
+        <p style="color:var(--text-secondary);margin-bottom:2rem;">Join 2,400+ students already using CampusRide.</p>
+        <a href="register.html" id="cta-register-btn" class="btn btn-primary btn-lg w-100">Create Free Account 🚀</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>&copy; 2026 <span>CampusRide</span> — Academic Project. All rights reserved.</p>
+  </footer>
+
+  <script>
+    const API_BASE = 'http://localhost:15501';
+    const VEHICLE_EMOJIS = { Scooter:'🛵', Bike:'🏍️', Car:'🚗', Bicycle:'🚲' };
+    const MOCK_VEHICLES = [
+      { vehicle_id:1, vehicle_type:'Scooter', brand:'Honda', model:'Activa', hourly_rate:50, fuel_type:'Petrol', seating_capacity:2, availability_status:'Available' },
+      { vehicle_id:2, vehicle_type:'Scooter', brand:'TVS', model:'Jupiter', hourly_rate:55, fuel_type:'Petrol', seating_capacity:2, availability_status:'Available' },
+      { vehicle_id:5, vehicle_type:'Car', brand:'Maruti', model:'Swift', hourly_rate:200, fuel_type:'Petrol', seating_capacity:5, availability_status:'Available' },
+    ];
+
+    async function loadVehicles() {
+      let vehicles;
+      try {
+        const r = await fetch(`${API_BASE}/api/vehicles`);
+        vehicles = await r.json();
+        if (!Array.isArray(vehicles)) vehicles = MOCK_VEHICLES;
+      } catch { vehicles = MOCK_VEHICLES; }
+
+      const grid = document.getElementById('vehicle-grid');
+      const shown = vehicles.filter(v => v.availability_status === 'Available').slice(0, 3);
+      grid.innerHTML = shown.map(v => `
+        <div class="vehicle-card" id="vc-${v.vehicle_id}">
+          <div class="vehicle-card-image">
+            <span class="vehicle-type-badge">${v.vehicle_type}</span>
+            <span class="fuel-badge">${v.fuel_type}</span>
+            ${VEHICLE_EMOJIS[v.vehicle_type] || '🚗'}
+          </div>
+          <div class="vehicle-card-body">
+            <div class="vehicle-card-title">${v.brand} ${v.model}</div>
+            <div class="vehicle-card-price">₹${v.hourly_rate}<small style="font-size:0.8rem;font-weight:400;color:var(--text-muted)">/hour</small></div>
+            <div class="vehicle-card-meta">
+              <span>💺 ${v.seating_capacity} seats</span>
+              <span class="status-badge status-available">● Available</span>
+            </div>
+            <div class="vehicle-card-footer">
+              <a href="vehicles.html?id=${v.vehicle_id}" class="btn btn-ghost btn-sm" style="flex:1">Details</a>
+              <a href="booking.html?vehicle_id=${v.vehicle_id}" class="btn btn-primary btn-sm" style="flex:1">Rent Now</a>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    loadVehicles();
+  </script>
+</body>
+</html>

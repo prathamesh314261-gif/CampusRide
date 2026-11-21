@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile — CampusRide</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    .profile-card{background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:20px;padding:2.5rem;max-width:600px;margin:0 auto;}
+    .avatar{width:80px;height:80px;border-radius:50%;background:var(--grad-primary);display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 1.25rem;font-weight:700;}
+    .msg-box{display:none;padding:.75rem 1rem;border-radius:10px;margin-bottom:1rem;font-size:.85rem;}
+    .msg-error{background:rgba(255,79,94,.15);color:#ff6b77;border:1px solid rgba(255,79,94,.3);}
+    .msg-success{background:rgba(0,229,160,.15);color:#00e5a0;border:1px solid rgba(0,229,160,.3);}
+  </style>
+</head>
+<body style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem">
+  <div style="max-width:620px;width:100%">
+    <div style="margin-bottom:1.5rem">
+      <a href="#" onclick="goBack()" style="color:var(--text-muted);text-decoration:none;font-size:.9rem">← Back to Dashboard</a>
+    </div>
+    <div class="profile-card">
+      <div class="avatar" id="avatar">?</div>
+      <div id="msg" class="msg-box"></div>
+
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" id="p-name" class="form-control">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Student ID / Roll Number</label>
+        <input type="text" id="p-roll" class="form-control" placeholder="e.g. 21BCE1024">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email <span style="color:var(--text-muted)">(read-only)</span></label>
+        <input type="email" id="p-email" class="form-control" readonly style="opacity:.6;cursor:not-allowed">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input type="text" id="p-phone" class="form-control">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Department</label>
+        <input type="text" id="p-dept" class="form-control">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Current Address (PG / Hostel)</label>
+        <input type="text" id="p-hostel" class="form-control" placeholder="e.g. Sai PG / Block B">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Bio</label>
+        <textarea id="p-bio" class="form-control" rows="2" placeholder="Tell others about yourself..."></textarea>
+      </div>
+
+      <div style="display:flex;gap:.75rem;margin-top:1rem">
+        <button onclick="saveProfile()" class="btn btn-primary" style="flex:1">💾 Save Changes</button>
+        <button onclick="goBack()" class="btn btn-ghost">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const API='http://localhost:15501';
+const token=sessionStorage.getItem('token');
+const loginAs=sessionStorage.getItem('login_as');
+if(!token){window.location.href='login.html';}
+
+function goBack(){
+  window.location.href=loginAs==='owner'?'owner-dashboard.html':loginAs==='admin'?'admin-dashboard.html':'dashboard.html';
+}
+
+async function loadProfile(){
+  const r=await fetch(`${API}/api/auth/profile`,{headers:{Authorization:`Bearer ${token}`}});
+  if(!r.ok){goBack();return;}
+  const d=await r.json();
+  document.getElementById('p-name').value=d.full_name||'';
+  document.getElementById('p-roll').value=d.roll_number||'';
+  document.getElementById('p-email').value=d.email||'';
+  document.getElementById('p-phone').value=d.phone||'';
+  document.getElementById('p-dept').value=d.department||'';
+  document.getElementById('p-hostel').value=d.hostel||'';
+  document.getElementById('p-bio').value=d.bio||'';
+  document.getElementById('avatar').textContent=(d.full_name||'S')[0].toUpperCase();
+  document.title=`${d.full_name} — CampusRide`;
+}
+
+async function saveProfile(){
+  const fd=new FormData();
+  fd.append('full_name',document.getElementById('p-name').value);
+  fd.append('roll_number',document.getElementById('p-roll').value);
+  fd.append('phone',document.getElementById('p-phone').value);
+  fd.append('department',document.getElementById('p-dept').value);
+  fd.append('hostel',document.getElementById('p-hostel').value);
+  fd.append('bio',document.getElementById('p-bio').value);
+  try{
+    const r=await fetch(`${API}/api/auth/profile`,{method:'PUT',headers:{Authorization:`Bearer ${token}`},body:fd});
+    const d=await r.json();
+    if(r.ok){
+      showMsg('✅ Profile updated!','success');
+      sessionStorage.setItem('user_name',document.getElementById('p-name').value);
+    }else showMsg(d.detail||'Failed to save','error');
+  }catch{showMsg('Server not reachable','error');}
+}
+
+function showMsg(msg,type){
+  const el=document.getElementById('msg');
+  el.textContent=msg;el.style.display='block';
+  el.className='msg-box '+(type==='error'?'msg-error':'msg-success');
+  setTimeout(()=>el.style.display='none',4000);
+}
+
+loadProfile();
+</script>
+</body>
+</html>

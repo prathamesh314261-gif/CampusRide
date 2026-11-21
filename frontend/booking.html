@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book a Vehicle — CampusRide</title>
+  <meta name="description" content="Book a campus vehicle on CampusRide — select dates, pickup location and confirm your rental.">
+  <link rel="stylesheet" href="../css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="container">
+      <a href="index.html" class="navbar-brand">🏍️ CampusRide</a>
+      <ul class="navbar-nav">
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="vehicles.html">Vehicles</a></li>
+        <li><a href="#" onclick="logout();" class="btn btn-ghost btn-sm">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div style="padding:3rem 0;">
+    <div class="container">
+      <div style="margin-bottom:2rem;">
+        <a href="vehicles.html" style="color:var(--text-muted);font-size:0.88rem;">← Back to Vehicles</a>
+        <h1 style="font-size:2rem;font-weight:800;letter-spacing:-0.5px;margin-top:0.75rem;">Book a Vehicle</h1>
+      </div>
+
+      <div id="booking-content">
+        <!-- Loading shimmer -->
+        <div class="booking-layout">
+          <div class="booking-vehicle-preview">
+            <div class="shimmer booking-preview-image"></div>
+            <div class="booking-preview-body">
+              <div class="shimmer" style="height:20px;width:60%;margin-bottom:10px;border-radius:4px;"></div>
+              <div class="shimmer" style="height:16px;width:40%;border-radius:4px;"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="shimmer" style="height:400px;border-radius:8px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2026 <span>CampusRide</span>. All rights reserved.</p>
+  </footer>
+
+  <script>
+    const API_BASE = 'http://localhost:15501';
+    const VEHICLE_EMOJIS = { Scooter:'🛵', Bike:'🏍️', Car:'🚗', Bicycle:'🚲' };
+
+    let selectedVehicle = null;
+    let discountAmount = 0;
+    let appliedCouponCode = '';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const vehicleId = urlParams.get('vehicle_id');
+
+    async function init() {
+      const token = sessionStorage.getItem('token');
+      if (!token) { window.location.href = 'login.html'; return; }
+
+      // Owners should not book — redirect to their dashboard
+      const loginAs = sessionStorage.getItem('login_as');
+      if (loginAs === 'owner') { window.location.href = 'owner-dashboard.html'; return; }
+
+      if (!vehicleId) {
+        document.getElementById('booking-content').innerHTML = `
+          <div class="card" style="text-align:center;padding:4rem;">
+            <div style="font-size:3rem;margin-bottom:1rem;">🚗</div>
+            <h3>No vehicle selected</h3>
+            <p class="text-muted">Please choose a vehicle first.</p>
+            <a href="vehicles.html" class="btn btn-primary mt-2">Browse Vehicles</a>
+          </div>`;
+        return;
+      }
+
+      // Fetch real vehicle data from backend — no mock fallbacks
+      try {
+        const r = await fetch(`${API_BASE}/api/vehicles/${vehicleId}`);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        selectedVehicle = await r.json();
+        if (!selectedVehicle || !selectedVehicle.vehicle_id) {
+          throw new Error('Vehicle not found');
+        }
+      } catch (err) {
+        document.getElementById('booking-content').innerHTML = `
+          <div class="card" style="text-align:center;padding:4rem;">
+            <div style="font-size:3rem;margin-bottom:1rem;">⚠️</div>
+            <h3>Vehicle not found</h3>
+            <p class="text-muted">Could not load vehicle details. Please go back and try again.</p>
+            <p style="color:var(--accent-red);font-size:0.8rem;margin-top:0.5rem;">${err.message}</p>
+            <a href="vehicles.html" class="btn btn-primary mt-2">Browse Vehicles</a>
+          </div>`;
+        return;
+      }
+
+      // Check availability
+      if (selectedVehicle.availability_status && selectedVehicle.availability_status !== 'Available') {
+        document.getElementById('booking-content').innerHTML = `
+          <div class="card" style="text-align:center;padding:4rem;">
+            <div style="font-size:3rem;margin-bottom:1rem;">🔒</div>
+            <h3>${selectedVehicle.brand} ${selectedVehicle.model} is ${selectedVehicle.availability_status}</h3>
+            <p class="text-muted">This vehicle is currently unavailable for booking.</p>
+            <a href="vehicles.html" class="btn btn-primary mt-2">Browse Available Vehicles</a>
+          </div>`;
+        return;
+      }
+
+      renderBookingForm();
+    }
+
+    function renderBookingForm() {
+      const v = selectedVehicle;
+      const emoji = VEHICLE_EMOJIS[v.vehicle_type] || '🚗';
+
+      // Set min datetime to now
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      const minDT = now.toISOString().slice(0, 16);
+
+      document.getElementById('booking-content').innerHTML = `
+        <div class="booking-layout">
+          <!-- Vehicle Preview -->
+          <div class="booking-vehicle-preview">
+            <div class="booking-preview-image">${emoji}</div>
+            <div class="booking-preview-body">
+              <div style="font-size:1.3rem;font-weight:800;margin-bottom:4px;">${v.brand} ${v.model}</div>
+              <div style="color:var(--text-muted);font-size:0.85rem;margin-bottom:0.75rem;">
+                ${v.vehicle_type} · ${v.fuel_type} · ${v.seating_capacity} seats
+              </div>
+              <div class="vehicle-card-price" style="font-size:1.6rem;">₹${v.hourly_rate}<small style="font-size:0.8rem;font-weight:400;color:var(--text-muted)">/hour</small></div>
+              <span class="status-badge status-available" style="margin-top:0.5rem;display:inline-block;">● Available</span>
+              ${v.license_plate ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.4rem;">🪪 ${v.license_plate}</div>` : ''}
+              ${v.location ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem;">📍 ${v.location}</div>` : ''}
+              ${v.owner_name ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem;">👤 Owner: ${v.owner_name}</div>` : ''}
+
+              <div class="price-summary" id="price-summary" style="display:none;">
+                <h4 style="font-size:0.9rem;font-weight:700;margin-bottom:0.75rem;">💰 Price Summary</h4>
+                <div id="price-details"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Booking Form -->
+          <div class="card">
+            <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:1.5rem;">Booking Details</h2>
+
+            <div id="booking-error" class="alert alert-error" style="display:none;"></div>
+            <div id="booking-success" class="alert alert-success" style="display:none;"></div>
+
+            <form id="bookingForm">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+                <div class="form-group">
+                  <label class="form-label">Start Date &amp; Time</label>
+                  <input type="datetime-local" id="start_time" class="form-control" min="${minDT}" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">End Date &amp; Time</label>
+                  <input type="datetime-local" id="end_time" class="form-control" min="${minDT}" required>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1rem;">
+                <div class="form-group">
+                  <label class="form-label">Pickup Location</label>
+                  <select id="pickup_location" class="form-control" required>
+                    <option value="Campus Main Gate">🏫 Campus Main Gate</option>
+                    <option value="Hostel / PG Area">🏠 Hostel / PG Area</option>
+                    <option value="Library">📚 Library</option>
+                    <option value="Sports Complex">⚽ Sports Complex</option>
+                    <option value="Academic Block">🏛️ Academic Block</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Return Location</label>
+                  <select id="return_location" class="form-control" required>
+                    <option value="Campus Main Gate">🏫 Campus Main Gate</option>
+                    <option value="Hostel / PG Area">🏠 Hostel / PG Area</option>
+                    <option value="Library">📚 Library</option>
+                    <option value="Sports Complex">⚽ Sports Complex</option>
+                    <option value="Academic Block">🏛️ Academic Block</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Coupon Code <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
+                <div class="input-group">
+                  <input type="text" id="coupon_code" class="form-control" placeholder="e.g. SAVE20" style="text-transform:uppercase;">
+                  <button type="button" onclick="applyCoupon()" class="btn btn-outline btn-sm" id="coupon-btn">Apply</button>
+                </div>
+                <div id="coupon-msg" style="font-size:0.8rem;margin-top:0.4rem;"></div>
+              </div>
+
+              <button type="submit" id="book-btn" class="btn btn-primary w-100 btn-lg" style="margin-top:0.5rem;">
+                🚀 Confirm Booking
+              </button>
+            </form>
+          </div>
+        </div>`;
+
+      // Events
+      document.getElementById('start_time').addEventListener('change', calculatePrice);
+      document.getElementById('end_time').addEventListener('change', calculatePrice);
+      document.getElementById('bookingForm').addEventListener('submit', handleBooking);
+      document.getElementById('coupon_code').addEventListener('input', () => {
+        // Reset coupon when user types
+        discountAmount = 0;
+        appliedCouponCode = '';
+        document.getElementById('coupon-msg').innerHTML = '';
+        calculatePrice();
+      });
+    }
+
+    function calculatePrice() {
+      const start = document.getElementById('start_time').value;
+      const end = document.getElementById('end_time').value;
+      if (!start || !end || !selectedVehicle) return;
+
+      const startDt = new Date(start);
+      const endDt = new Date(end);
+      const hours = (endDt - startDt) / (1000 * 60 * 60);
+
+      if (hours <= 0) {
+        document.getElementById('end_time').setCustomValidity('End must be after start');
+        return;
+      }
+      document.getElementById('end_time').setCustomValidity('');
+
+      let subtotal = hours * selectedVehicle.hourly_rate;
+      // 10% bulk discount for >12 hrs (mirrors SQL fn_calculate_rental_cost)
+      if (hours > 12) subtotal = subtotal * 0.90;
+      const discount = discountAmount;
+      const final = Math.max(0, subtotal - discount);
+
+      document.getElementById('price-summary').style.display = 'block';
+      document.getElementById('price-details').innerHTML = `
+        <div class="price-row"><span>Duration</span><span>${hours.toFixed(2)} hrs</span></div>
+        <div class="price-row"><span>Rate</span><span>₹${selectedVehicle.hourly_rate}/hr</span></div>
+        ${hours > 12 ? `<div class="price-row"><span>Bulk Discount (10%)</span><span style="color:var(--accent-green)">−10%</span></div>` : ''}
+        <div class="price-row"><span>Subtotal</span><span>₹${subtotal.toFixed(2)}</span></div>
+        ${discount > 0 ? `<div class="price-row discount"><span>Coupon 🎟️ (${appliedCouponCode})</span><span>−₹${discount.toFixed(2)}</span></div>` : ''}
+        <div class="price-row total"><span>Total</span><span>₹${final.toFixed(2)}</span></div>
+      `;
+
+      window.bookingCalc = { hours, subtotal, discount, final };
+    }
+
+    // Coupon validation — calls real backend /api/coupons/validate endpoint
+    async function applyCoupon() {
+      const code = document.getElementById('coupon_code').value.trim().toUpperCase();
+      const msgEl = document.getElementById('coupon-msg');
+      const btn = document.getElementById('coupon-btn');
+
+      if (!code) { msgEl.innerHTML = '<span style="color:var(--accent-red);">⚠️ Enter a coupon code</span>'; return; }
+      if (!window.bookingCalc) { msgEl.innerHTML = '<span style="color:var(--accent-gold);">⚠️ Select booking dates first</span>'; return; }
+
+      btn.textContent = '...'; btn.disabled = true;
+
+      try {
+        const r = await fetch(`${API_BASE}/api/coupons/validate?code=${encodeURIComponent(code)}&subtotal=${window.bookingCalc.subtotal}`, {
+          headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` }
+        });
+        const data = await r.json();
+        if (r.ok && data.valid) {
+          discountAmount = data.discount_amount;
+          appliedCouponCode = code;
+          msgEl.innerHTML = `<span style="color:var(--accent-green);">✅ ${data.discount_percentage}% discount applied! (−₹${data.discount_amount.toFixed(2)})</span>`;
+          calculatePrice();
+        } else {
+          discountAmount = 0; appliedCouponCode = '';
+          msgEl.innerHTML = `<span style="color:var(--accent-red);">❌ ${data.detail || 'Invalid or expired coupon'}</span>`;
+          calculatePrice();
+        }
+      } catch {
+        msgEl.innerHTML = '<span style="color:var(--accent-red);">❌ Could not validate coupon. Try again.</span>';
+      }
+
+      btn.textContent = 'Apply'; btn.disabled = false;
+    }
+
+    async function handleBooking(e) {
+      e.preventDefault();
+      const token = sessionStorage.getItem('token');
+      if (!token) { window.location.href = 'login.html'; return; }
+
+      if (!window.bookingCalc) { calculatePrice(); }
+      if (!window.bookingCalc || window.bookingCalc.hours <= 0) {
+        showError('Please select valid booking start and end times.');
+        return;
+      }
+
+      const btn = document.getElementById('book-btn');
+      btn.textContent = 'Confirming…';
+      btn.disabled = true;
+      hideError();
+
+      // ✅ Use FormData — backend expects Form params, NOT query string
+      const fd = new FormData();
+      fd.append('vehicle_id', vehicleId);
+      fd.append('start_time', document.getElementById('start_time').value);
+      fd.append('end_time', document.getElementById('end_time').value);
+      fd.append('pickup_location', document.getElementById('pickup_location').value);
+      fd.append('return_location', document.getElementById('return_location').value);
+      const coupon = document.getElementById('coupon_code').value.trim().toUpperCase();
+      if (coupon && appliedCouponCode === coupon) fd.append('coupon_code', coupon);
+
+      try {
+        const r = await fetch(`${API_BASE}/api/rentals`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd
+        });
+        const data = await r.json();
+
+        if (r.ok) {
+          // Store real rental details from backend for payment page
+          sessionStorage.setItem('last_rental_id', data.rental_id);
+          sessionStorage.setItem('last_rental_amount', data.final_amount);
+          sessionStorage.setItem('last_vehicle_id', vehicleId);
+          window.location.href = 'payment.html';
+        } else {
+          showError(data.detail || 'Booking failed. Please try again.');
+        }
+      } catch (err) {
+        showError('Cannot connect to server. Please make sure the server is running and try again.');
+      }
+
+      btn.textContent = '🚀 Confirm Booking';
+      btn.disabled = false;
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('booking-error');
+      if (el) { el.textContent = msg; el.style.display = 'block'; }
+    }
+    function hideError() {
+      const el = document.getElementById('booking-error');
+      if (el) el.style.display = 'none';
+    }
+
+    function logout() { sessionStorage.clear(); window.location.href = 'index.html'; }
+
+    init();
+  </script>
+</body>
+</html>

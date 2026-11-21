@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browse Vehicles — CampusRide</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="index.html" class="navbar-brand">🏍️ CampusRide</a>
+      <ul class="navbar-nav">
+        <li><a href="dashboard.html" id="nav-dash">Dashboard</a></li>
+        <li><a href="vehicles.html" class="active" id="nav-vehicles">Vehicles</a></li>
+        <li><a href="#" onclick="logout()" class="btn btn-ghost btn-sm">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div style="padding: 3rem 0;">
+    <div class="container">
+
+      <div style="margin-bottom:2rem;">
+        <h1 style="font-size:2rem;font-weight:800;letter-spacing:-0.5px;">Browse Vehicles</h1>
+        <p style="color:var(--text-secondary);">Find and rent available campus vehicles.</p>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-bar">
+        <select id="filter-type" onchange="applyFilters()">
+          <option value="">All Types</option>
+          <option value="Scooter">🛵 Scooter</option>
+          <option value="Bike">🏍️ Bike</option>
+          <option value="Car">🚗 Car</option>
+          <option value="Bicycle">🚲 Bicycle</option>
+        </select>
+        <select id="filter-fuel" onchange="applyFilters()">
+          <option value="">All Fuels</option>
+          <option value="Petrol">Petrol</option>
+          <option value="Diesel">Diesel</option>
+          <option value="Electric">Electric ⚡</option>
+        </select>
+        <input type="number" id="filter-min" placeholder="Min ₹/hr" style="width:110px;" onchange="applyFilters()">
+        <input type="number" id="filter-max" placeholder="Max ₹/hr" style="width:110px;" onchange="applyFilters()">
+        <button onclick="loadVehicles(true)" class="btn btn-ghost btn-sm" style="margin-left:auto; display:flex; align-items:center; gap:0.4rem;">🔄 Refresh Fleet</button>
+        <button onclick="resetFilters()" class="btn btn-ghost btn-sm">Reset</button>
+        <span id="vehicle-count" style="color:var(--text-muted);font-size:0.85rem;"></span>
+      </div>
+
+      <!-- Vehicle Grid -->
+      <div class="vehicle-grid" id="vehicle-grid"></div>
+
+      <!-- Empty state -->
+      <div id="empty-state" style="display:none;text-align:center;padding:5rem 2rem;">
+        <div style="font-size:4rem;margin-bottom:1rem;">🔍</div>
+        <h3 style="font-weight:700;margin-bottom:0.5rem;">No vehicles found</h3>
+        <p style="color:var(--text-secondary);">Try adjusting your filters.</p>
+        <button onclick="resetFilters()" class="btn btn-outline mt-2">Clear Filters</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2026 <span>CampusRide</span>. All rights reserved.</p>
+  </footer>
+
+  <script>
+    const API_BASE = 'http://localhost:15501';
+    const VEHICLE_EMOJIS = { Scooter:'🛵', Bike:'🏍️', Car:'🚗', Bicycle:'🚲' };
+    const MOCK_VEHICLES = [
+      { vehicle_id:1, vehicle_type:'Scooter', brand:'Honda', model:'Activa', hourly_rate:50, fuel_type:'Petrol', seating_capacity:2, availability_status:'Available', license_plate:'MH02AB1234' },
+      { vehicle_id:2, vehicle_type:'Scooter', brand:'TVS', model:'Jupiter', hourly_rate:55, fuel_type:'Petrol', seating_capacity:2, availability_status:'Available', license_plate:'MH02AB1235' },
+      { vehicle_id:3, vehicle_type:'Bike', brand:'Royal Enfield', model:'Classic 350', hourly_rate:100, fuel_type:'Petrol', seating_capacity:2, availability_status:'Rented', license_plate:'MH02AB1236' },
+      { vehicle_id:4, vehicle_type:'Scooter', brand:'Honda', model:'Dio', hourly_rate:60, fuel_type:'Petrol', seating_capacity:2, availability_status:'Available', license_plate:'MH02AB1237' },
+      { vehicle_id:5, vehicle_type:'Car', brand:'Maruti', model:'Swift', hourly_rate:200, fuel_type:'Petrol', seating_capacity:5, availability_status:'Available', license_plate:'MH02CD5679' },
+      { vehicle_id:6, vehicle_type:'Bike', brand:'Yamaha', model:'FZ-S', hourly_rate:70, fuel_type:'Petrol', seating_capacity:2, availability_status:'Available', license_plate:'MH02CD5680' },
+      { vehicle_id:7, vehicle_type:'Scooter', brand:'Ola', model:'S1 Pro', hourly_rate:45, fuel_type:'Electric', seating_capacity:2, availability_status:'Available', license_plate:'MH02EV0001' },
+    ];
+
+    let allVehicles = [];
+
+    async function loadVehicles(isManual = false) {
+      const token = sessionStorage.getItem('token');
+      if (!token) { window.location.href = 'login.html'; return; }
+      const loginAs = sessionStorage.getItem('login_as');
+      if (loginAs === 'owner') { window.location.href = 'owner-dashboard.html'; return; }
+
+      if (isManual) {
+        toast('🔄 Refreshing vehicle fleet...');
+      }
+
+      const grid = document.getElementById('vehicle-grid');
+      // Shimmer while loading
+      grid.innerHTML = Array(6).fill(`
+        <div class="vehicle-card" style="min-height:300px;">
+          <div class="shimmer" style="height:180px;border-radius:0;"></div>
+          <div style="padding:1.25rem;">
+            <div class="shimmer" style="height:16px;width:70%;margin-bottom:10px;border-radius:4px;"></div>
+            <div class="shimmer" style="height:14px;width:40%;margin-bottom:20px;border-radius:4px;"></div>
+            <div class="shimmer" style="height:34px;width:100%;border-radius:8px;"></div>
+          </div>
+        </div>`).join('');
+
+      try {
+        const r = await fetch(`${API_BASE}/api/vehicles`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!r.ok) throw new Error(`Server error: ${r.status}`);
+        allVehicles = await r.json();
+        if (!Array.isArray(allVehicles)) throw new Error('Invalid response from server');
+        if (isManual) {
+          toast('✅ Fleet updated with fresh data!');
+        }
+      } catch (err) {
+        grid.innerHTML = `
+          <div style="grid-column:1/-1;text-align:center;padding:4rem 2rem;">
+            <div style="font-size:3rem;margin-bottom:1rem;">⚠️</div>
+            <h3 style="color:var(--accent-red);">Could not load vehicles</h3>
+            <p style="color:var(--text-muted);margin-bottom:1rem;">${err.message}</p>
+            <p style="color:var(--text-muted);font-size:0.85rem;">Make sure the backend server is running at <strong>http://localhost:15501</strong></p>
+            <button onclick="loadVehicles(true)" class="btn btn-primary mt-2">🔄 Retry</button>
+          </div>`;
+        return;
+      }
+
+      renderVehicles(allVehicles);
+    }
+
+    function renderVehicles(vehicles) {
+      const grid = document.getElementById('vehicle-grid');
+      const empty = document.getElementById('empty-state');
+      const count = document.getElementById('vehicle-count');
+
+      if (vehicles.length === 0) {
+        grid.innerHTML = '';
+        empty.style.display = 'block';
+        count.textContent = '0 vehicles';
+        return;
+      }
+
+      empty.style.display = 'none';
+      count.textContent = `${vehicles.length} vehicle${vehicles.length > 1 ? 's' : ''}`;
+
+      grid.innerHTML = vehicles.map(v => {
+        const emoji = VEHICLE_EMOJIS[v.vehicle_type] || '🚗';
+        const avail = v.availability_status;
+        const statusClass = avail === 'Available' ? 'status-available' : avail === 'Rented' ? 'status-rented' : 'status-maintenance';
+
+        return `
+        <div class="vehicle-card" id="vc-${v.vehicle_id}">
+          <div class="vehicle-card-image">
+            <span class="vehicle-type-badge">${v.vehicle_type}</span>
+            <span class="fuel-badge">${v.fuel_type}</span>
+            ${emoji}
+          </div>
+          <div class="vehicle-card-body">
+            <div class="vehicle-card-title">${v.brand} ${v.model}</div>
+            <div class="vehicle-card-price">₹${v.hourly_rate}<small style="font-size:0.75rem;font-weight:400;color:var(--text-muted)">/hour</small></div>
+            <div class="vehicle-card-meta">
+              <span>💺 ${v.seating_capacity} seats</span>
+              <span>🪪 ${v.license_plate}</span>
+            </div>
+            <div style="margin-bottom:0.75rem;">
+              <span class="status-badge ${statusClass}">● ${avail}</span>
+            </div>
+            <div class="vehicle-card-footer">
+              ${avail === 'Available'
+                ? `<a href="booking.html?vehicle_id=${v.vehicle_id}" class="btn btn-primary btn-sm" style="flex:1">Rent Now</a>`
+                : `<button disabled class="btn btn-ghost btn-sm" style="flex:1;cursor:not-allowed;opacity:0.5;">Unavailable</button>`
+              }
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function applyFilters() {
+      const type = document.getElementById('filter-type').value;
+      const fuel = document.getElementById('filter-fuel').value;
+      const min = parseFloat(document.getElementById('filter-min').value) || 0;
+      const max = parseFloat(document.getElementById('filter-max').value) || Infinity;
+
+      const filtered = allVehicles.filter(v => {
+        if (type && v.vehicle_type !== type) return false;
+        if (fuel && v.fuel_type !== fuel) return false;
+        if (v.hourly_rate < min || v.hourly_rate > max) return false;
+        return true;
+      });
+
+      renderVehicles(filtered);
+    }
+
+    function resetFilters() {
+      document.getElementById('filter-type').value = '';
+      document.getElementById('filter-fuel').value = '';
+      document.getElementById('filter-min').value = '';
+      document.getElementById('filter-max').value = '';
+      renderVehicles(allVehicles);
+    }
+
+    function logout() { sessionStorage.clear(); window.location.href = 'index.html'; }
+
+    function toast(msg) {
+      let t = document.getElementById('toast');
+      if (!t) {
+        t = document.createElement('div');
+        t.id = 'toast';
+        t.style.cssText = 'position:fixed;bottom:2rem;right:2rem;background:var(--bg-elevated);border:1px solid var(--glass-border);color:var(--text-primary);padding:.9rem 1.5rem;border-radius:12px;font-size:.9rem;z-index:9999;box-shadow:var(--shadow-md);transition:opacity .3s;';
+        document.body.appendChild(t);
+      }
+      t.textContent = msg;
+      t.style.opacity = '1';
+      clearTimeout(t._t);
+      t._t = setTimeout(() => t.style.opacity = '0', 3000);
+    }
+
+    loadVehicles();
+  </script>
+</body>
+</html>
